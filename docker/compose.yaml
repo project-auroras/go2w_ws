@@ -1,0 +1,23 @@
+# docker compose -f docker/compose.yaml run --rm go2w
+services:
+  go2w:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        USER_UID: ${UID:-1000}
+        USER_GID: ${GID:-1000}
+    image: go2w:humble
+    network_mode: host   # DDS discovery with the robot
+    ipc: host            # DDS shared memory
+    environment:
+      - DISPLAY=${DISPLAY}
+      - GO2_IFACE=${GO2_IFACE:-}
+      - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
+    volumes:
+      - ..:/ws
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    devices:
+      - /dev/dri:/dev/dri
+    stdin_open: true
+    tty: true

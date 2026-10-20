@@ -1,0 +1,27 @@
+go2w_driver:
+  ros__parameters:
+    # LowState.motor_state index of each joint. Legs follow Unitree's order (FR, FL, RR, RL).
+    # Wheels (12-15) are NOT verified yet: spin each wheel by hand and check /joint_states.
+    joint_names: [
+      FR_hip_joint, FR_thigh_joint, FR_calf_joint,
+      FL_hip_joint, FL_thigh_joint, FL_calf_joint,
+      RR_hip_joint, RR_thigh_joint, RR_calf_joint,
+      RL_hip_joint, RL_thigh_joint, RL_calf_joint,
+      FR_foot_joint, FL_foot_joint, RR_foot_joint, RL_foot_joint]
+    motor_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+
+    # sportmodestate: robot state estimator (pose + velocity)
+    # robot_pose: L1 LiDAR odometry from /utlidar/robot_pose (pose only)
+    odom_source: sportmodestate
+    odom_frame: odom
+    footprint_frame: base_footprint
+    base_frame: base_link
+    imu_frame: imu
+    publish_tf: true
+    base_height_offset: 0.0
+    publish_rate: 100.0
+
+    max_vx: 1.0
+    max_vy: 0.0
+    max_wz: 1.5
+    cmd_vel_timeout: 0.5

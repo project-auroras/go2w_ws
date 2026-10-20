@@ -1,0 +1,14 @@
+# External packages, imported into src/external with: vcs import src/external < deps.repos
+repositories:
+  unitree_go:
+    type: git
+    url: https://github.com/Unitree-Go2-Robot/unitree_go.git
+    version: 989e069d72894c1da58526b458ed64fe163d8435
+  unitree_api:
+    type: git
+    url: https://github.com/Unitree-Go2-Robot/unitree_api.git
+    version: 31d307bf988eb8c800063155a1c67f13e15be144
+  go2_interfaces:
+    type: git
+    url: https://github.com/Unitree-Go2-Robot/go2_interfaces.git
+    version: 0e0e3a0a9e4fb80f3b1cfe8cde187046d55af308
