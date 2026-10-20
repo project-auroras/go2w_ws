@@ -50,6 +50,17 @@ scripts/nx_update.sh                               # cada vez que haya cambios
 GO2_IFACE=eth0 source scripts/env.sh
 ```
 
+### Internet en la NX a través del PC
+
+El PC se conecta por cable a la red del robot (192.168.123.x) y comparte su WiFi. No es persistente: se deshace con `down` o reiniciando.
+
+```bash
+# PC (cualquier Linux): detecta solo el cable al robot y la interfaz con internet
+scripts/pc_share_internet.sh up            # o: up <cable_robot> <interfaz_internet>
+# NX (por ssh desde el PC): [IP del PC] [interfaz de la NX]
+scripts/nx_internet.sh up 192.168.123.99 eth0
+```
+
 ## Lanzar
 
 ```bash
