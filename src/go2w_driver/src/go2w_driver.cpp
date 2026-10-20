@@ -46,6 +46,7 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
     "motor_indices", {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15});
 
   odom_source_ = declare_parameter<std::string>("odom_source", "sportmodestate");
+  sport_state_topic_ = declare_parameter<std::string>("sport_state_topic", "sportmodestate");
   odom_frame_ = declare_parameter<std::string>("odom_frame", "odom");
   footprint_frame_ = declare_parameter<std::string>("footprint_frame", "base_footprint");
   base_frame_ = declare_parameter<std::string>("base_frame", "base_link");
@@ -80,7 +81,7 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
 
   if (odom_source_ == "sportmodestate") {
     sport_state_sub_ = create_subscription<unitree_go::msg::SportModeState>(
-      "sportmodestate", unitree_qos, std::bind(&Go2WDriver::sport_state_callback, this, _1));
+      sport_state_topic_, unitree_qos, std::bind(&Go2WDriver::sport_state_callback, this, _1));
   } else if (odom_source_ == "robot_pose") {
     robot_pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
       "/utlidar/robot_pose", unitree_qos,
@@ -104,7 +105,9 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
   watchdog_timer_ = create_wall_timer(
     std::chrono::milliseconds(50), std::bind(&Go2WDriver::watchdog_callback, this));
 
-  RCLCPP_INFO(get_logger(), "go2w_driver started (odom_source: %s)", odom_source_.c_str());
+  RCLCPP_INFO(
+    get_logger(), "go2w_driver started (odom_source: %s%s)", odom_source_.c_str(),
+    sport_state_sub_ ? (", " + sport_state_topic_).c_str() : "");
 }
 
 bool Go2WDriver::throttle(rclcpp::Time & last, const rclcpp::Time & now) const

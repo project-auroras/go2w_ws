@@ -13,6 +13,8 @@ go2w_driver:
     # sportmodestate: robot state estimator (pose + velocity)
     # robot_pose: L1 LiDAR odometry from /utlidar/robot_pose (pose only)
     odom_source: sportmodestate
+    # Topic of the sport mode state (odom_source: sportmodestate)
+    sport_state_topic: sportmodestate
     odom_frame: odom
     footprint_frame: base_footprint
     base_frame: base_link

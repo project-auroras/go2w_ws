@@ -84,6 +84,7 @@ private:
   std::vector<std::string> joint_names_;
   std::vector<int64_t> motor_indices_;
   std::string odom_source_;
+  std::string sport_state_topic_;
   std::string odom_frame_;
   std::string footprint_frame_;
   std::string base_frame_;
