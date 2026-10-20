@@ -82,11 +82,12 @@ ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_down'"
 
 ## Pendiente de verificar en el robot
 
-1. **Índices de las ruedas** (`config/go2w_driver.yaml`, `motor_indices` 12-15): girar cada rueda a mano y comprobar que se mueve el `*_foot_joint` correcto en `/joint_states`. Las patas siguen el orden de Unitree (FR, FL, RR, RL).
-2. **Frame de la nube**: `/utlidar/cloud` debe salir alineada con el suelo en RViz. Si no, ajustar `utlidar_lidar_joint` en el URDF.
-3. **Odometría**: comprobar que `velocity` de `sportmodestate` está en el frame del mundo y que la altura de `base_link` es razonable (`base_height_offset`).
-4. **Move en modo ruedas**: confirmar que el Go2-W acepta la API 1008 igual que el Go2. Probar con el robot en espacio libre y velocidades bajas.
-5. **QoS**: si algún topic de Unitree no llega, revisar `ros2 topic info -v`.
+Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con las patas en el orden de Unitree.
+
+1. **Frame de la nube**: `/utlidar/cloud` debe salir alineada con el suelo en RViz. Si no, ajustar `utlidar_lidar_joint` en el URDF.
+2. **Odometría**: comprobar que `velocity` de `sportmodestate` está en el frame del mundo y que la altura de `base_link` es razonable (`base_height_offset`).
+3. **Move en modo ruedas**: confirmar que el Go2-W acepta la API 1008 igual que el Go2. Probar con el robot en espacio libre y velocidades bajas.
+4. **QoS**: si algún topic de Unitree no llega, revisar `ros2 topic info -v`.
 
 ## Siguiente paso: EasyNav
 

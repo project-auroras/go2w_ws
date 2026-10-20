@@ -34,7 +34,7 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
   tf_broadcaster_(this)
 {
   // Unitree motor order: FR, FL, RR, RL (hip, thigh, calf), then the four wheels.
-  // Wheel indices 12-15 must be checked on the real robot.
+  // Wheel indices 12-15 checked on the real robot.
   joint_names_ = declare_parameter<std::vector<std::string>>(
     "joint_names", {
       "FR_hip_joint", "FR_thigh_joint", "FR_calf_joint",

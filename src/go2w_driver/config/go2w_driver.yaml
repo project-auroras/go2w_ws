@@ -1,7 +1,7 @@
 go2w_driver:
   ros__parameters:
     # LowState.motor_state index of each joint. Legs follow Unitree's order (FR, FL, RR, RL).
-    # Wheels (12-15) are NOT verified yet: spin each wheel by hand and check /joint_states.
+    # Wheels 12-15 (FR, FL, RR, RL) checked on the robot (2026-10-20).
     joint_names: [
       FR_hip_joint, FR_thigh_joint, FR_calf_joint,
       FL_hip_joint, FL_thigh_joint, FL_calf_joint,
