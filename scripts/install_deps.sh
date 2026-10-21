@@ -26,7 +26,8 @@ install_system() {
     ros-humble-tf2-tools \
     ros-humble-pointcloud-to-laserscan \
     ros-humble-rviz2 \
-    ros-humble-plotjuggler-ros
+    ros-humble-plotjuggler-ros \
+    ros-humble-slam-toolbox
   [ -f /etc/ros/rosdep/sources.list.d/20-default.list ] || $SUDO rosdep init
 }
 
