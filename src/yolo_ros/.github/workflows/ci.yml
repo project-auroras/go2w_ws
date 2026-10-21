@@ -1,0 +1,16 @@
+name: CI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  docker-push:
+    strategy:
+      fail-fast: false
+      matrix:
+        ros_distro: [foxy, galactic, humble, iron, jazzy, kilted, lyrical]
+    uses: ./.github/workflows/docker-push.yml
+    with:
+      ros_distro: ${{ matrix.ros_distro }}
+    secrets: inherit

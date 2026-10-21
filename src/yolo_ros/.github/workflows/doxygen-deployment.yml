@@ -1,0 +1,71 @@
+name: Doxygen
+
+on:
+  push:
+    branches: [yolo_onnx_cpp]
+    paths:
+      - ".github/Doxyfile"
+      - ".github/Doxyfile.check"
+      - ".github/workflows/doxygen-deployment.yml"
+      - "yolo_ros/**"
+      - "README.md"
+  pull_request:
+    paths:
+      - ".github/Doxyfile"
+      - ".github/Doxyfile.check"
+      - ".github/workflows/doxygen-deployment.yml"
+      - "yolo_ros/**"
+      - "README.md"
+  release:
+    types: [published]
+
+jobs:
+  docs-check:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build docs and fail on warnings
+        uses: mattnotmitt/doxygen-action@v1.12
+        with:
+          doxyfile-path: ".github/Doxyfile.check"
+
+  doxygen_generation:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate Doxygen
+        uses: mattnotmitt/doxygen-action@v1.12
+        with:
+          doxyfile-path: ".github/Doxyfile"
+
+      - name: Create redirect for root
+        run: |
+          mkdir -p redirect
+          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=${{ github.event.release.tag_name }}/"/></head></html>' > redirect/index.html
+
+      - name: Deploy Doxygen page
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: docs/doxygen
+          destination_dir: ${{ github.event.release.tag_name }}
+          keep_files: true
+
+      - name: Deploy redirect to root
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: redirect
+          keep_files: true

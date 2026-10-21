@@ -1,0 +1,47 @@
+# Single pipeline definition for the single yolo_node. The `plugins` order
+# defines the data-flow chain: the first plugin must be the detector, and each
+# plugin consumes the previous plugin's output for every camera it selects.
+# All output channels/topics are camera-prefixed (<cam>/detections, ...).
+#
+# IMPORTANT: rclcpp loads `--params-file` sections by the node's fully
+# qualified name, so the block key includes the launch namespace (default
+# "yolo"). If you change `namespace:=`, update the block name to match.
+/yolo/yolo_node:
+  ros__parameters:
+    plugins: ["detection", "tracking", "detection3d", "debug"]
+    cameras: ["cam0"]
+    cam0:
+      rgb_topic: /camera/rgb/image_raw
+      depth_topic: /camera/depth/image_raw
+      depth_info_topic: /camera/depth/camera_info
+      image_reliability: 1
+      depth_reliability: 1
+    detection:
+      plugin: yolo_ros/DetectionPlugin
+      model_repo: unileon-robotics/YOLO26-ONNX
+      model_filename: yolo26s.onnx
+      threshold: 0.7
+      iou: 0.45
+      n_threads: -1
+      img_width: 640
+      img_height: 480
+      provider: cuda
+      cameras: ["cam0"]
+    tracking:
+      plugin: yolo_ros/TrackingPlugin
+      cameras: ["cam0"]
+      tracker_type: bytetrack
+      track_high_thresh: 0.25
+      track_low_thresh: 0.1
+      new_track_thresh: 0.25
+      track_buffer: 30
+      match_thresh: 0.8
+      fuse_score: true
+    detection3d:
+      plugin: yolo_ros/Detect3DPlugin
+      cameras: ["cam0"]
+      target_frame: base_link
+    debug:
+      plugin: yolo_ros/DebugPlugin
+      cameras: ["cam0"]
+      marker_lifetime: 0.5

@@ -1,0 +1,29 @@
+# Classification preset: detection + debug only (no tracking/3D instances),
+# the `detection` block selects a classification ONNX export.
+/yolo/yolo_node:
+  ros__parameters:
+    plugins: ["detection", "debug"]
+    cameras: ["cam0"]
+    cam0:
+      rgb_topic: /camera/rgb/image_raw
+      depth_topic: /camera/depth/image_raw
+      depth_info_topic: /camera/depth/camera_info
+      image_reliability: 2
+      depth_reliability: 2
+    detection:
+      plugin: yolo_ros/DetectionPlugin
+      model_type: classify
+      model_repo: unileon-robotics/YOLO26-ONNX
+      model_filename: yolo26s-cls.onnx
+      threshold: 0.7
+      iou: 0.45
+      top_k: 5
+      n_threads: -1
+      img_width: 640
+      img_height: 480
+      provider: cuda
+      cameras: ["cam0"]
+    debug:
+      plugin: yolo_ros/DebugPlugin
+      cameras: ["cam0"]
+      marker_lifetime: 0.5
