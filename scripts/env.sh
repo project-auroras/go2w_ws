@@ -1,5 +1,5 @@
 # Source this file (PC container and NX): ROS 2 Humble + CycloneDDS + workspace.
-#   GO2_IFACE=eth0 source scripts/env.sh
+#   GO2_IFACE=enP8p1s0 source scripts/env.sh
 GO2W_WS="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 source /opt/ros/humble/setup.bash

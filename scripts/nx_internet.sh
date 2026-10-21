@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
 # Run on the NX: reach the internet through the PC (see pc_share_internet.sh).
-#   nx_internet.sh up [pc_ip] [iface]     defaults: 192.168.123.99 eth0
+#   nx_internet.sh up [pc_ip] [iface]     default pc_ip: 192.168.123.99
 #   nx_internet.sh down [pc_ip] [iface]
+# Without iface it uses the one with an address on the robot network (enP8p1s0 on the NX).
+# pc_ip is the PC address on the robot network: check it with 'ip -br a' on the PC.
 # Only adds a default route and DNS: the robot network (DDS) is not touched.
 # Not persistent: undo with 'down' or reboot.
 set -euo pipefail
 
 ACTION="${1:-}"
 PC_IP="${2:-192.168.123.99}"
-IFACE="${3:-eth0}"
+IFACE="${3:-}"
 DNS=(1.1.1.1 8.8.8.8)
 SUDO=$([ "$(id -u)" -eq 0 ] && echo "" || echo "sudo")
 
 if [[ ! "$ACTION" =~ ^(up|down)$ ]]; then
   echo "usage: $0 up|down [pc_ip] [iface]" >&2
   exit 1
+fi
+if [ -z "$IFACE" ]; then
+  IFACE=$(ip -o -4 addr show | awk '$4 ~ /^192\.168\.123\./ {print $2; exit}')
+  if [ -z "$IFACE" ]; then
+    echo "no interface with a 192.168.123.x address: pass it as 3rd argument (ip -br a)" >&2
+    exit 1
+  fi
+  echo "[go2w] interface $IFACE"
 fi
 if ! ip link show "$IFACE" >/dev/null 2>&1; then
   echo "interface '$IFACE' not found (ip -br link)" >&2

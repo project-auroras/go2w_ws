@@ -72,7 +72,7 @@ sudo apt install python3-vcstool python3-rosdep   # una sola vez
 git clone <repo> ~/go2w_ws && cd ~/go2w_ws
 scripts/install_deps.sh all                        # una sola vez
 scripts/nx_update.sh                               # cada vez que haya cambios
-GO2_IFACE=eth0 source scripts/env.sh
+GO2_IFACE=enP8p1s0 source scripts/env.sh          # interfaz de la NX en la red del robot
 ```
 
 ### Internet en la NX a través del PC
@@ -82,8 +82,9 @@ El PC se conecta por cable a la red del robot (192.168.123.x) y comparte su WiFi
 ```bash
 # PC (cualquier Linux): detecta solo el cable al robot y la interfaz con internet
 scripts/pc_share_internet.sh up            # o: up <cable_robot> <interfaz_internet>
-# NX (por ssh desde el PC): [IP del PC] [interfaz de la NX]
-scripts/nx_internet.sh up 192.168.123.99 eth0
+# NX (por ssh desde el PC): IP del PC en la red del robot (mirarla con 'ip -br a' en el PC).
+# La interfaz de la NX (enP8p1s0) se detecta sola.
+scripts/nx_internet.sh up 192.168.123.99
 ```
 
 ## Lanzar

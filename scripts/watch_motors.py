@@ -2,7 +2,7 @@
 # Live table of the 20 LowState motors, marking the ones that move.
 # Used to check the motor index of each joint: move one wheel/leg by hand
 # and see which row lights up. Reads /lowstate directly (not the driver).
-#   GO2_IFACE=eth0 source scripts/env.sh && python3 scripts/watch_motors.py
+#   GO2_IFACE=enP8p1s0 source scripts/env.sh && python3 scripts/watch_motors.py
 import math
 
 import rclpy
