@@ -14,6 +14,14 @@ RUN /tmp/install_deps.sh system \
     && apt-get install -y --no-install-recommends sudo bash-completion less vim \
     && rm -rf /var/lib/apt/lists/* /tmp/install_deps.sh
 
+# PlotJuggler 4 from its apt repo (PC only, not on the NX)
+COPY docker/plotjuggler.asc /etc/apt/keyrings/plotjuggler.asc
+RUN echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/plotjuggler.asc] https://apt.plotjuggler.io stable main" \
+        > /etc/apt/sources.list.d/plotjuggler.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends plotjuggler4 \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} \
     && echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \

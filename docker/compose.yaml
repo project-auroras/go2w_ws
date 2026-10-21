@@ -10,8 +10,10 @@ services:
     image: go2w:humble
     network_mode: host   # DDS discovery with the robot
     ipc: host            # DDS shared memory
+    gpus: all            # NVIDIA GPU for OpenGL (needs nvidia-container-toolkit on the host)
     environment:
       - DISPLAY=${DISPLAY}
+      - NVIDIA_DRIVER_CAPABILITIES=all
       - GO2_IFACE=${GO2_IFACE:-}
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
     volumes:

@@ -7,6 +7,7 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 | `go2w_description` | URDF y mallas del Go2-W (de `unitreerobotics/unitree_ros`), con raíz `base_link` y frame `utlidar_lidar` |
 | `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `sportmodestate` → `/odom` y TF `odom → base_footprint → base_link`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
 | `go2w_bringup` | Lanza description + driver + `/utlidar/cloud` → `/scan` + RViz |
+| `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
 
 Paquetes de terceros copiados como código en `src/` (sin `.git`; para actualizarlos, sustituir la carpeta por la nueva versión y anotar aquí el commit):
 
@@ -34,6 +35,20 @@ Una sola vez, para instalar Docker en Ubuntu 24.04:
 sudo apt install docker.io docker-compose-v2
 sudo usermod -aG docker $USER   # cerrar sesión y volver a entrar
 ```
+
+GPU NVIDIA en el contenedor (OpenGL para RViz y PlotJuggler; el compose usa `gpus: all`):
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -sL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt update && sudo apt install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+La imagen trae `plotjuggler4` (repo `apt.plotjuggler.io`, clave en `docker/plotjuggler.asc`).
 
 Uso:
 
@@ -83,11 +98,24 @@ ros2 run plotjuggler plotjuggler                   # gráficas de topics (ROS2 T
 
 ### Simulación (`sim:=true`)
 
-`sim_go2w` hace de robot: publica `/lowstate` y `/sportmodestate` y ejecuta `/api/sport/request` (Move, StopMove, StandUp, StandDown...). El driver corre igual que con el robot real, así que `/cmd_vel`, `/mode`, `/odom`, TF y `/joint_states` funcionan. Es solo cinemático: sin física ni LiDAR (no hay `/scan`). No lanzarlo con el robot conectado.
+`sim_go2w` hace de robot: publica `/lowstate` y `/lf/sportmodestate` (como el robot) y ejecuta `/api/sport/request` (Move, StopMove, StandUp, StandDown...). El driver corre igual que con el robot real, así que `/cmd_vel`, `/mode`, `/odom`, TF y `/joint_states` funcionan. Es solo cinemático: sin física ni LiDAR (no hay `/scan`). No lanzarlo con el robot conectado.
 
 ```bash
 ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angular: {z: 0.3}}"
 ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_down'"
+```
+
+### Prueba de navegación (`go2w_nav_test`)
+
+Recorre los `waypoints` de `go2w_nav_test/config/waypoint_follower.yaml` (por defecto un cuadrado de 1 m a la izquierda), relativos a donde está el robot al arrancar el nodo. Va a 0.3 m/s y 0.5 rad/s como máximo. Se para mientras haya algo a menos de `stop_distance` (0.5 m) delante en `/scan`, y si dejan de llegar `/odom` o `/scan`. Termina al llegar al último waypoint; Ctrl+C lo para (el watchdog del driver detiene el robot en 0.5 s).
+
+```bash
+ros2 launch go2w_bringup go2w.launch.py                         # con el robot (publica /scan)
+ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_up'"
+ros2 launch go2w_nav_test waypoint_follower.launch.py
+
+ros2 launch go2w_bringup go2w.launch.py sim:=true               # en simulación (sin /scan)
+ros2 launch go2w_nav_test waypoint_follower.launch.py   # con use_scan: false en el yaml
 ```
 
 ## Pendiente de verificar en el robot

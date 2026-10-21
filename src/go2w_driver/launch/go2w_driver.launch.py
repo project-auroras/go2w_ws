@@ -35,6 +35,8 @@ def generate_launch_description():
                     package='go2w_driver',
                     plugin='go2w_driver::SimGo2W',
                     name='sim_go2w',
+                    # Same topic the driver reads on the robot (sport_state_topic)
+                    remappings=[('sportmodestate', '/lf/sportmodestate')],
                     condition=IfCondition(LaunchConfiguration('sim')),
                 ),
             ],
