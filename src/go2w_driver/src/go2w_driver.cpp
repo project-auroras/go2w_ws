@@ -15,6 +15,7 @@
 #include "go2w_driver/go2w_driver.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <map>
 #include <stdexcept>
 
@@ -60,6 +61,18 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
   max_wz_ = declare_parameter<double>("max_wz", 1.5);
   cmd_vel_timeout_ = declare_parameter<double>("cmd_vel_timeout", 0.5);
 
+  // Wheel odometry, for when sportmodestate does not carry the position (Go2-W)
+  wheel_indices_ = declare_parameter<std::vector<int64_t>>("wheel_indices", {12, 13, 14, 15});
+  wheel_directions_ = declare_parameter<std::vector<double>>(
+    "wheel_directions", {1.0, 1.0, 1.0, 1.0});
+  wheel_radius_ = declare_parameter<double>("wheel_radius", 0.086);
+  wheel_half_track_ = declare_parameter<double>("wheel_half_track", 0.15);
+  wheel_yaw_source_ = declare_parameter<std::string>("wheel_yaw_source", "imu");
+
+  // LiDAR odometry from FAST-LIO
+  lio_topic_ = declare_parameter<std::string>("lio_topic", "/Odometry");
+  lidar_frame_ = declare_parameter<std::string>("lidar_frame", "utlidar_lidar");
+
   if (joint_names_.size() != motor_indices_.size()) {
     throw std::invalid_argument("joint_names and motor_indices must have the same size");
   }
@@ -68,6 +81,18 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
     if (index < 0 || index >= num_motors) {
       throw std::invalid_argument("motor index out of range: " + std::to_string(index));
     }
+  }
+
+  if (wheel_indices_.size() != 4 || wheel_directions_.size() != 4) {
+    throw std::invalid_argument("wheel_indices and wheel_directions need 4 values (FR, FL, RR, RL)");
+  }
+  for (const auto index : wheel_indices_) {
+    if (index < 0 || index >= num_motors) {
+      throw std::invalid_argument("wheel index out of range: " + std::to_string(index));
+    }
+  }
+  if (wheel_yaw_source_ != "imu" && wheel_yaw_source_ != "wheels") {
+    throw std::invalid_argument("wheel_yaw_source must be 'imu' or 'wheels'");
   }
 
   const auto zero = rclcpp::Time(0, 0, get_clock()->get_clock_type());
@@ -86,8 +111,14 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
     robot_pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
       "/utlidar/robot_pose", unitree_qos,
       std::bind(&Go2WDriver::robot_pose_callback, this, _1));
-  } else {
-    throw std::invalid_argument("odom_source must be 'sportmodestate' or 'robot_pose'");
+  } else if (odom_source_ == "lio") {
+    tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    lio_sub_ = create_subscription<nav_msgs::msg::Odometry>(
+      lio_topic_, 10, std::bind(&Go2WDriver::lio_callback, this, _1));
+  } else if (odom_source_ != "wheels") {
+    throw std::invalid_argument(
+      "odom_source must be 'sportmodestate', 'robot_pose', 'wheels' or 'lio'");
   }
 
   cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
@@ -105,9 +136,11 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
   watchdog_timer_ = create_wall_timer(
     std::chrono::milliseconds(50), std::bind(&Go2WDriver::watchdog_callback, this));
 
+  const std::string odom_topic =
+    sport_state_sub_ ? ", " + sport_state_topic_ : lio_sub_ ? ", " + lio_topic_ : "";
   RCLCPP_INFO(
     get_logger(), "go2w_driver started (odom_source: %s%s)", odom_source_.c_str(),
-    sport_state_sub_ ? (", " + sport_state_topic_).c_str() : "");
+    odom_topic.c_str());
 }
 
 bool Go2WDriver::throttle(rclcpp::Time & last, const rclcpp::Time & now) const
@@ -122,6 +155,10 @@ bool Go2WDriver::throttle(rclcpp::Time & last, const rclcpp::Time & now) const
 void Go2WDriver::low_state_callback(const unitree_go::msg::LowState::SharedPtr msg)
 {
   const auto stamp = now();
+  // Integrate every message, publish at publish_rate
+  if (odom_source_ == "wheels") {
+    integrate_wheel_odometry(*msg, stamp);
+  }
   if (!throttle(last_low_state_pub_, stamp)) {
     return;
   }
@@ -170,6 +207,64 @@ void Go2WDriver::low_state_callback(const unitree_go::msg::LowState::SharedPtr m
     battery.power_supply_technology = sensor_msgs::msg::BatteryState::POWER_SUPPLY_TECHNOLOGY_LION;
     battery_pub_->publish(battery);
   }
+
+  if (odom_source_ == "wheels" && wheel_odom_started_) {
+    // Roll and pitch from the IMU, yaw from the odometry
+    const auto & q = imu_state.quaternion;
+    double roll, pitch, yaw;
+    tf2::Matrix3x3(tf2::Quaternion(q[1], q[2], q[3], q[0])).getRPY(roll, pitch, yaw);
+    tf2::Quaternion orientation;
+    orientation.setRPY(roll, pitch, odom_yaw_);
+    publish_odometry(
+      stamp, {odom_x_, odom_y_, 0.0},
+      {orientation.w(), orientation.x(), orientation.y(), orientation.z()},
+      {wheel_vx_, 0.0, 0.0}, wheel_wz_);
+  }
+}
+
+void Go2WDriver::integrate_wheel_odometry(
+  const unitree_go::msg::LowState & msg, const rclcpp::Time & stamp)
+{
+  // Wheel order FR, FL, RR, RL: right wheels are 0 and 2
+  double right = 0.0, left = 0.0;
+  for (size_t i = 0; i < 4; i++) {
+    const double speed =
+      msg.motor_state.at(wheel_indices_[i]).dq * wheel_directions_[i] * wheel_radius_;
+    (i % 2 == 0 ? right : left) += speed / 2.0;
+  }
+  wheel_vx_ = (right + left) / 2.0;
+
+  const auto & q = msg.imu_state.quaternion;
+  double roll, pitch, imu_yaw;
+  tf2::Matrix3x3(tf2::Quaternion(q[1], q[2], q[3], q[0])).getRPY(roll, pitch, imu_yaw);
+
+  if (!wheel_odom_started_) {
+    // Odometry starts at (0, 0, 0) wherever the robot is
+    imu_yaw_start_ = imu_yaw;
+    last_wheel_odom_ = stamp;
+    wheel_odom_started_ = true;
+    return;
+  }
+
+  const double dt = (stamp - last_wheel_odom_).seconds();
+  last_wheel_odom_ = stamp;
+  if (dt <= 0.0 || dt > 0.5) {
+    return;
+  }
+
+  const double previous_yaw = odom_yaw_;
+  if (wheel_yaw_source_ == "imu") {
+    wheel_wz_ = msg.imu_state.gyroscope[2];
+    odom_yaw_ = std::remainder(imu_yaw - imu_yaw_start_, 2.0 * M_PI);
+  } else {
+    wheel_wz_ = (right - left) / (2.0 * wheel_half_track_);
+    odom_yaw_ = std::remainder(odom_yaw_ + wheel_wz_ * dt, 2.0 * M_PI);
+  }
+
+  // Midpoint heading of the step
+  const double yaw = previous_yaw + std::remainder(odom_yaw_ - previous_yaw, 2.0 * M_PI) / 2.0;
+  odom_x_ += wheel_vx_ * std::cos(yaw) * dt;
+  odom_y_ += wheel_vx_ * std::sin(yaw) * dt;
 }
 
 void Go2WDriver::sport_state_callback(const unitree_go::msg::SportModeState::SharedPtr msg)
@@ -203,6 +298,57 @@ void Go2WDriver::robot_pose_callback(const geometry_msgs::msg::PoseStamped::Shar
   const auto & p = msg->pose.position;
   const auto & q = msg->pose.orientation;
   publish_odometry(stamp, {p.x, p.y, p.z}, {q.w, q.x, q.y, q.z}, {0.0, 0.0, 0.0}, 0.0);
+}
+
+void Go2WDriver::lio_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+{
+  if (!lio_started_) {
+    // base_link -> L1 from the URDF (robot_state_publisher)
+    geometry_msgs::msg::TransformStamped t;
+    try {
+      t = tf_buffer_->lookupTransform(base_frame_, lidar_frame_, tf2::TimePointZero);
+    } catch (const tf2::TransformException & e) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 2000, "Waiting for TF %s -> %s: %s",
+        base_frame_.c_str(), lidar_frame_.c_str(), e.what());
+      return;
+    }
+    const auto & tr = t.transform.translation;
+    const auto & r = t.transform.rotation;
+    base_to_lidar_ = tf2::Transform(
+      tf2::Quaternion(r.x, r.y, r.z, r.w), tf2::Vector3(tr.x, tr.y, tr.z));
+  }
+
+  // FAST-LIO starts where the L1 is (camera_init), so odom starts where base_link is
+  const auto & p = msg->pose.pose.position;
+  const auto & q = msg->pose.pose.orientation;
+  const tf2::Transform lidar_pose(tf2::Quaternion(q.x, q.y, q.z, q.w), tf2::Vector3(p.x, p.y, p.z));
+  const tf2::Transform pose = base_to_lidar_ * lidar_pose * base_to_lidar_.inverse();
+
+  // FAST-LIO publishes no velocity: take it from the motion since the previous pose
+  const rclcpp::Time stamp(msg->header.stamp);
+  tf2::Vector3 v_body(0.0, 0.0, 0.0);
+  double wz = 0.0;
+  if (lio_started_) {
+    const double dt = (stamp - last_lio_stamp_).seconds();
+    if (dt > 0.0 && dt < 0.5) {
+      const tf2::Transform delta = last_lio_pose_.inverse() * pose;
+      v_body = delta.getOrigin() / dt;
+      double roll, pitch, yaw;
+      tf2::Matrix3x3(delta.getRotation()).getRPY(roll, pitch, yaw);
+      wz = yaw / dt;
+    }
+  }
+  lio_started_ = true;
+  last_lio_pose_ = pose;
+  last_lio_stamp_ = stamp;
+
+  // Planar odometry: the height drift of FAST-LIO is dropped
+  const auto & o = pose.getOrigin();
+  const auto r = pose.getRotation();
+  publish_odometry(
+    now(), {o.x(), o.y(), 0.0}, {r.w(), r.x(), r.y(), r.z()},
+    {v_body.x(), v_body.y(), v_body.z()}, wz);
 }
 
 void Go2WDriver::publish_odometry(

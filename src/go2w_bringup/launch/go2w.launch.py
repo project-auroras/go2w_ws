@@ -16,13 +16,32 @@ def generate_launch_description():
                               description='Simulated robot (sim_go2w), no LiDAR'),
         DeclareLaunchArgument('scan', default_value='true',
                               description='Convert /utlidar/cloud to /scan'),
+        DeclareLaunchArgument('lio', default_value='true',
+                              description='LiDAR odometry with FAST-LIO, else wheel odometry'),
 
         IncludeLaunchDescription(PythonLaunchDescriptionSource(PathJoinSubstitution(
             [FindPackageShare('go2w_description'), 'launch', 'description.launch.py']))),
 
         IncludeLaunchDescription(PythonLaunchDescriptionSource(PathJoinSubstitution(
             [FindPackageShare('go2w_driver'), 'launch', 'go2w_driver.launch.py'])),
-            launch_arguments={'sim': LaunchConfiguration('sim')}.items()),
+            launch_arguments={
+                'sim': LaunchConfiguration('sim'),
+                'odom_source': PythonExpression(
+                    ["'lio' if '", LaunchConfiguration('lio'), "' == 'true' else 'wheels'"]),
+            }.items()),
+
+        # /Odometry for go2w_driver (odom_source: lio). Its own launch file is not used
+        # because it adds odom -> camera_init and body -> base_link TFs.
+        Node(
+            package='fast_lio',
+            executable='fastlio_mapping',
+            name='laser_mapping',
+            output='screen',
+            parameters=[PathJoinSubstitution([bringup, 'config', 'fast_lio.yaml'])],
+            condition=IfCondition(PythonExpression([
+                "'", LaunchConfiguration('lio'), "' == 'true' and '",
+                LaunchConfiguration('sim'), "' != 'true'"])),
+        ),
 
         Node(
             package='pointcloud_to_laserscan',

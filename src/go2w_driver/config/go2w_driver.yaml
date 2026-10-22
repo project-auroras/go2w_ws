@@ -12,7 +12,12 @@ go2w_driver:
 
     # sportmodestate: robot state estimator (pose + velocity)
     # robot_pose: L1 LiDAR odometry from /utlidar/robot_pose (pose only)
-    odom_source: sportmodestate
+    # wheels: wheel speeds from lowstate, yaw from the IMU or the wheels
+    # lio: FAST-LIO2 on /utlidar/cloud + /utlidar/imu (go2w_bringup runs it)
+    # On the Go2-W (2026-10-21) sportmodestate position and velocity stay at 0 and
+    # /utlidar/robot_pose is not published: Unitree has not released Go2-W odometry yet.
+    # The value here is overridden by go2w_driver.launch.py (odom_source argument).
+    odom_source: lio
     # Topic of the sport mode state (odom_source: sportmodestate)
     sport_state_topic: /lf/sportmodestate
     odom_frame: odom
@@ -21,6 +26,19 @@ go2w_driver:
     imu_frame: imu
     publish_tf: true
     base_height_offset: 0.0
+
+    # odom_source: wheels. Order FR, FL, RR, RL. wheel_directions: -1.0 for a wheel whose dq
+    # is negative when the robot drives forward (check with scripts/watch_motors.py).
+    wheel_indices: [12, 13, 14, 15]
+    wheel_directions: [1.0, 1.0, 1.0, 1.0]
+    wheel_radius: 0.086
+    wheel_half_track: 0.15
+    # imu: yaw from lowstate imu_state; wheels: from the speed difference (uses wheel_half_track)
+    wheel_yaw_source: imu
+
+    # odom_source: lio. /Odometry of fast_lio and the frame of the L1 in the URDF.
+    lio_topic: /Odometry
+    lidar_frame: utlidar_lidar
     publish_rate: 100.0
 
     max_vx: 1.0

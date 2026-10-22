@@ -1,0 +1,54 @@
+# FAST-LIO2 (fast_lio_go2) on the Go2-W L1 LiDAR, from fast_lio_go2/config/utlidar.yaml.
+# /Odometry is the pose of the L1 (frame body) from where it started (camera_init);
+# go2w_driver (odom_source: lio) turns it into /odom and odom -> base_footprint.
+# Keep the robot still for ~2 s after starting: the IMU is initialised then.
+laser_mapping:
+  ros__parameters:
+    feature_extract_enable: false
+    point_filter_num: 3
+    max_iteration: 3
+    filter_size_surf: 0.25
+    filter_size_map: 0.25
+    cube_side_length: 1000.0
+    runtime_pos_log_enable: false
+    map_file_path: ""
+
+    common:
+      lid_topic: /utlidar/cloud
+      imu_topic: /utlidar/imu
+      time_sync_en: false
+      time_offset_lidar_to_imu: 0.0
+
+    preprocess:
+      lidar_type: 5          # UTLIDAR (/utlidar/cloud with ring and time fields)
+      scan_line: 64
+      blind: 0.5             # Drop points closer than this (the robot itself)
+      timestamp_unit: 0      # time field in seconds
+      scan_rate: 10
+
+    mapping:
+      acc_cov: 8.0
+      gyr_cov: 5.0
+      b_acc_cov: 5.0
+      b_gyr_cov: 5.0
+      fov_degree: 180.0
+      det_range: 30.0
+      extrinsic_est_en: false
+      # L1 IMU -> LiDAR
+      extrinsic_T: [0.007698, 0.014655, -0.00667]
+      extrinsic_R: [1., 0., 0.,
+                    0., 1., 0.,
+                    0., 0., 1.]
+
+    # Only /Odometry is needed; the clouds are for debugging in RViz (frame camera_init)
+    publish:
+      path_en: false
+      effect_map_en: false
+      map_en: false
+      scan_publish_en: true
+      dense_publish_en: false
+      scan_bodyframe_pub_en: false
+
+    pcd_save:
+      pcd_save_en: false
+      interval: -1

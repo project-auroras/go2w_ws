@@ -12,3 +12,9 @@ repositories:
     type: git
     url: https://github.com/Unitree-Go2-Robot/go2_interfaces.git
     version: 0e0e3a0a9e4fb80f3b1cfe8cde187046d55af308
+  # FAST-LIO2 with /utlidar/cloud support (lidar_type 5), lidar odometry for the Go2-W.
+  # Its livox_ros_driver2 dependency is src/livox_ros_driver2 (messages only).
+  fast_lio_go2:
+    type: git
+    url: https://github.com/aron-assani/fast_lio_go2.git
+    version: 540b85bfa2d77e9547da59a9c93089224a1c2f3e

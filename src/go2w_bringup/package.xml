@@ -11,6 +11,7 @@
 
   <exec_depend>go2w_description</exec_depend>
   <exec_depend>go2w_driver</exec_depend>
+  <exec_depend>fast_lio</exec_depend>
   <exec_depend>pointcloud_to_laserscan</exec_depend>
   <exec_depend>rviz2</exec_depend>
 

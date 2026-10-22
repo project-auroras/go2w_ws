@@ -25,6 +25,7 @@ install_system() {
     ros-humble-tf2-ros \
     ros-humble-tf2-tools \
     ros-humble-pointcloud-to-laserscan \
+    ros-humble-pcl-ros \
     ros-humble-rviz2 \
     ros-humble-plotjuggler-ros \
     ros-humble-slam-toolbox

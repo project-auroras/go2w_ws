@@ -5,8 +5,8 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 | Paquete | Qué hace |
 |---|---|
 | `go2w_description` | URDF y mallas del Go2-W (de `unitreerobotics/unitree_ros`), con raíz `base_link` y frame `utlidar_lidar` |
-| `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `sportmodestate` → `/odom` y TF `odom → base_footprint → base_link`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
-| `go2w_bringup` | Lanza description + driver + `/utlidar/cloud` → `/scan` + RViz |
+| `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `/odom` y TF `odom → base_footprint → base_link` desde FAST-LIO (`odom_source: lio`, por defecto), las ruedas (`wheels`, en `sim:=true`) o `sportmodestate`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
+| `go2w_bringup` | Lanza description + driver + FAST-LIO (`lio:=true`) + `/utlidar/cloud` → `/scan` + RViz |
 | `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
 
 Paquetes de terceros copiados como código en `src/` (sin `.git`; para actualizarlos, sustituir la carpeta por la nueva versión y anotar aquí el commit):
@@ -19,7 +19,7 @@ Paquetes de terceros copiados como código en `src/` (sin `.git`; para actualiza
 | `yaets` | [fmrico/yaets](https://github.com/fmrico/yaets) | 1.2.0 | `1452f14` |
 | `yolo_ros` | [mgonzs13/yolo_ros](https://github.com/mgonzs13/yolo_ros) | 5.0.0 | `7924a8b` |
 
-Dependencias externas (en `deps.repos`, con commits fijos): `unitree_go`, `unitree_api`, `go2_interfaces` de [Unitree-Go2-Robot](https://github.com/Unitree-Go2-Robot).
+Dependencias externas (en `deps.repos`, con commits fijos): `unitree_go`, `unitree_api`, `go2_interfaces` de [Unitree-Go2-Robot](https://github.com/Unitree-Go2-Robot), y [fast_lio_go2](https://github.com/aron-assani/fast_lio_go2) (FAST-LIO2 con soporte de `/utlidar/cloud`). `src/livox_ros_driver2` tiene solo los mensajes de Livox que necesita `fast_lio` para compilar.
 
 ## Flujo de trabajo
 
@@ -124,7 +124,7 @@ ros2 launch go2w_nav_test waypoint_follower.launch.py   # con use_scan: false en
 Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con las patas en el orden de Unitree.
 
 1. **Frame de la nube**: `/utlidar/cloud` debe salir alineada con el suelo en RViz. Si no, ajustar `utlidar_lidar_joint` en el URDF.
-2. **Odometría**: comprobar que `velocity` de `sportmodestate` está en el frame del mundo y que la altura de `base_link` es razonable (`base_height_offset`).
+2. **Odometría**: el Go2-W no publica odometría (`sportmodestate` da position/velocity a 0 y `/utlidar/robot_odom` no publica; Unitree aún no la ha sacado para el Go2-W). Se usa FAST-LIO sobre `/utlidar/cloud` + `/utlidar/imu`. Arrancar con el robot quieto ~2 s. Comprobar: 1 m adelante → `/odom` x≈1; giro 90° → yaw≈1.57; con las ruedas girando en el aire `/odom` no se mueve. Si los ejes salen girados, revisar `utlidar_lidar_joint`. Alternativa: `lio:=false` (odometría por ruedas).
 3. **Move en modo ruedas**: confirmar que el Go2-W acepta la API 1008 igual que el Go2. Probar con el robot en espacio libre y velocidades bajas.
 4. **QoS**: si algún topic de Unitree no llega, revisar `ros2 topic info -v`.
 

@@ -29,7 +29,10 @@
 #include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "tf2/LinearMath/Transform.h"
+#include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_broadcaster.h"
+#include "tf2_ros/transform_listener.h"
 
 #include "go2_interfaces/srv/mode.hpp"
 #include "unitree_api/msg/request.hpp"
@@ -65,6 +68,10 @@ private:
   void low_state_callback(const unitree_go::msg::LowState::SharedPtr msg);
   void sport_state_callback(const unitree_go::msg::SportModeState::SharedPtr msg);
   void robot_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+  // odom_source: lio. Pose of the LiDAR from FAST-LIO, moved to base_link.
+  void lio_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  // odom_source: wheels. Integrates the wheel speeds, yaw from the IMU or the wheels.
+  void integrate_wheel_odometry(const unitree_go::msg::LowState & msg, const rclcpp::Time & stamp);
   void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
   void watchdog_callback();
 
@@ -95,9 +102,21 @@ private:
   double max_vx_, max_vy_, max_wz_;
   double cmd_vel_timeout_;
 
+  // Wheel odometry (odom_source: wheels)
+  std::vector<int64_t> wheel_indices_;     // FR, FL, RR, RL
+  std::vector<double> wheel_directions_;   // +1/-1 so that forward is positive
+  double wheel_radius_;
+  double wheel_half_track_;
+  std::string wheel_yaw_source_;           // imu or wheels
+
+  // LiDAR odometry (odom_source: lio)
+  std::string lio_topic_;
+  std::string lidar_frame_;                // frame of the FAST-LIO body (the L1)
+
   rclcpp::Subscription<unitree_go::msg::LowState>::SharedPtr low_state_sub_;
   rclcpp::Subscription<unitree_go::msg::SportModeState>::SharedPtr sport_state_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr robot_pose_sub_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr lio_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
 
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
@@ -109,12 +128,25 @@ private:
   rclcpp::Service<go2_interfaces::srv::Mode>::SharedPtr mode_service_;
   rclcpp::TimerBase::SharedPtr watchdog_timer_;
   tf2_ros::TransformBroadcaster tf_broadcaster_;
+  std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   rclcpp::Time last_low_state_pub_;
   rclcpp::Time last_odom_pub_;
   rclcpp::Time last_battery_pub_;
   rclcpp::Time last_cmd_vel_;
   bool moving_{false};
+
+  bool wheel_odom_started_{false};
+  rclcpp::Time last_wheel_odom_;
+  double odom_x_{0.0}, odom_y_{0.0}, odom_yaw_{0.0};
+  double imu_yaw_start_{0.0};
+  double wheel_vx_{0.0}, wheel_wz_{0.0};
+
+  bool lio_started_{false};
+  tf2::Transform base_to_lidar_;           // From the URDF, looked up once
+  tf2::Transform last_lio_pose_;           // base_link in odom
+  rclcpp::Time last_lio_stamp_;
 };
 
 }  // namespace go2w_driver
