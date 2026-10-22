@@ -72,6 +72,7 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
   // LiDAR odometry from FAST-LIO
   lio_topic_ = declare_parameter<std::string>("lio_topic", "/Odometry");
   lidar_frame_ = declare_parameter<std::string>("lidar_frame", "utlidar_lidar");
+  lidar_imu_flip_acc_ = declare_parameter<bool>("lidar_imu_flip_acc", true);
 
   if (joint_names_.size() != motor_indices_.size()) {
     throw std::invalid_argument("joint_names and motor_indices must have the same size");
@@ -116,6 +117,10 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     lio_sub_ = create_subscription<nav_msgs::msg::Odometry>(
       lio_topic_, 10, std::bind(&Go2WDriver::lio_callback, this, _1));
+    // FAST-LIO reads lidar_imu (imu_topic in go2w_bringup/config/fast_lio.yaml), reliable
+    lidar_imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("lidar_imu", 50);
+    lidar_imu_sub_ = create_subscription<sensor_msgs::msg::Imu>(
+      "/utlidar/imu", unitree_qos, std::bind(&Go2WDriver::lidar_imu_callback, this, _1));
   } else if (odom_source_ != "wheels") {
     throw std::invalid_argument(
       "odom_source must be 'sportmodestate', 'robot_pose', 'wheels' or 'lio'");
@@ -298,6 +303,19 @@ void Go2WDriver::robot_pose_callback(const geometry_msgs::msg::PoseStamped::Shar
   const auto & p = msg->pose.position;
   const auto & q = msg->pose.orientation;
   publish_odometry(stamp, {p.x, p.y, p.z}, {q.w, q.x, q.y, q.z}, {0.0, 0.0, 0.0}, 0.0);
+}
+
+void Go2WDriver::lidar_imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
+{
+  // At rest /utlidar/imu reads (2.5, 0, 9.8) while its frame is the L1, upside down
+  // (gyro z < 0 turning left, floor at z > 0 in /utlidar/cloud): it publishes gravity,
+  // not specific force (checked 2026-10-22). FAST-LIO diverges with it.
+  if (lidar_imu_flip_acc_) {
+    msg->linear_acceleration.x = -msg->linear_acceleration.x;
+    msg->linear_acceleration.y = -msg->linear_acceleration.y;
+    msg->linear_acceleration.z = -msg->linear_acceleration.z;
+  }
+  lidar_imu_pub_->publish(*msg);
 }
 
 void Go2WDriver::lio_callback(const nav_msgs::msg::Odometry::SharedPtr msg)

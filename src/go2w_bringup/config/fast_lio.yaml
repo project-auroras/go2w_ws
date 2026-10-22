@@ -15,7 +15,7 @@ laser_mapping:
 
     common:
       lid_topic: /utlidar/cloud
-      imu_topic: /utlidar/imu
+      imu_topic: /lidar_imu      # /utlidar/imu with the accelerometer sign fixed (go2w_driver)
       time_sync_en: false
       time_offset_lidar_to_imu: 0.0
 

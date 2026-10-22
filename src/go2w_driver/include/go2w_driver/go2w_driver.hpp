@@ -70,6 +70,8 @@ private:
   void robot_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
   // odom_source: lio. Pose of the LiDAR from FAST-LIO, moved to base_link.
   void lio_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+  // Republishes the L1 IMU for FAST-LIO with the accelerometer sign fixed.
+  void lidar_imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   // odom_source: wheels. Integrates the wheel speeds, yaw from the IMU or the wheels.
   void integrate_wheel_odometry(const unitree_go::msg::LowState & msg, const rclcpp::Time & stamp);
   void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
@@ -112,17 +114,20 @@ private:
   // LiDAR odometry (odom_source: lio)
   std::string lio_topic_;
   std::string lidar_frame_;                // frame of the FAST-LIO body (the L1)
+  bool lidar_imu_flip_acc_;                // /utlidar/imu gives -specific force
 
   rclcpp::Subscription<unitree_go::msg::LowState>::SharedPtr low_state_sub_;
   rclcpp::Subscription<unitree_go::msg::SportModeState>::SharedPtr sport_state_sub_;
   rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr robot_pose_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr lio_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr lidar_imu_sub_;
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
 
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub_;
   rclcpp::Publisher<sensor_msgs::msg::BatteryState>::SharedPtr battery_pub_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr lidar_imu_pub_;
   rclcpp::Publisher<unitree_api::msg::Request>::SharedPtr request_pub_;
 
   rclcpp::Service<go2_interfaces::srv::Mode>::SharedPtr mode_service_;
