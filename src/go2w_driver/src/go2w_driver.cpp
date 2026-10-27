@@ -72,7 +72,7 @@ Go2WDriver::Go2WDriver(const rclcpp::NodeOptions & options)
   // LiDAR odometry from FAST-LIO
   lio_topic_ = declare_parameter<std::string>("lio_topic", "/Odometry");
   lidar_frame_ = declare_parameter<std::string>("lidar_frame", "utlidar_lidar");
-  lidar_imu_flip_acc_ = declare_parameter<bool>("lidar_imu_flip_acc", true);
+  lidar_imu_flip_acc_ = declare_parameter<bool>("lidar_imu_flip_acc", false);
 
   if (joint_names_.size() != motor_indices_.size()) {
     throw std::invalid_argument("joint_names and motor_indices must have the same size");
@@ -307,9 +307,9 @@ void Go2WDriver::robot_pose_callback(const geometry_msgs::msg::PoseStamped::Shar
 
 void Go2WDriver::lidar_imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
-  // At rest /utlidar/imu reads (2.5, 0, 9.8) while its frame is the L1, upside down
-  // (gyro z < 0 turning left, floor at z > 0 in /utlidar/cloud): it publishes gravity,
-  // not specific force (checked 2026-10-22). FAST-LIO diverges with it.
+  // At rest /utlidar/imu reads (2.5, 0, 9.8) while the L1 is upside down (floor at z > 0
+  // in /utlidar/cloud), so its accelerometer does not match the cloud frame. Negating it did
+  // not help: FAST-LIO works the same or better with the raw IMU (checked 2026-10-27).
   if (lidar_imu_flip_acc_) {
     msg->linear_acceleration.x = -msg->linear_acceleration.x;
     msg->linear_acceleration.y = -msg->linear_acceleration.y;

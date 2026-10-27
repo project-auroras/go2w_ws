@@ -39,8 +39,9 @@ go2w_driver:
     # odom_source: lio. /Odometry of fast_lio and the frame of the L1 in the URDF.
     lio_topic: /Odometry
     lidar_frame: utlidar_lidar
-    # /utlidar/imu accelerometer has the wrong sign: republished fixed on /lidar_imu for FAST-LIO
-    lidar_imu_flip_acc: true
+    # Negate the /utlidar/imu accelerometer on /lidar_imu. Off: FAST-LIO works with the raw IMU
+    # (checked on the robot and replaying a bag, 2026-10-27)
+    lidar_imu_flip_acc: false
     publish_rate: 100.0
 
     max_vx: 1.0

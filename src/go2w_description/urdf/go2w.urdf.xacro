@@ -747,9 +747,11 @@
     <axis xyz="0 0 0" />
   </joint>
 
-  <!-- Frame used by the L1 LiDAR in /utlidar/cloud. Assumed coincident with 'radar'; verify against the real cloud. -->
+  <!-- Frame used by the L1 LiDAR in /utlidar/cloud: 'radar' turned -118.5 deg about its z.
+       Measured on the real robot (2026-10-27 bag): floor plane normal in the cloud, FAST-LIO
+       motion driving forward and the yaw axis of a turn in place all agree on it. -->
   <joint name="utlidar_lidar_joint" type="fixed">
-    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <origin xyz="0 0 0" rpy="0 0 -2.0682"/>
     <parent link="radar"/>
     <child link="utlidar_lidar"/>
   </joint>
