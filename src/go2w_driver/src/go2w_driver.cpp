@@ -361,11 +361,12 @@ void Go2WDriver::lio_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
   last_lio_pose_ = pose;
   last_lio_stamp_ = stamp;
 
-  // Planar odometry: the height drift of FAST-LIO is dropped
+  // Planar odometry: the height drift of FAST-LIO is dropped. Stamped with the scan time, not
+  // now(): /scan carries the same L1 stamp, and slam_toolbox looks up odom at that stamp
   const auto & o = pose.getOrigin();
   const auto r = pose.getRotation();
   publish_odometry(
-    now(), {o.x(), o.y(), 0.0}, {r.w(), r.x(), r.y(), r.z()},
+    stamp, {o.x(), o.y(), 0.0}, {r.w(), r.x(), r.y(), r.z()},
     {v_body.x(), v_body.y(), v_body.z()}, wz);
 }
 
