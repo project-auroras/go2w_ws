@@ -40,13 +40,14 @@ laser_mapping:
                     0., 1., 0.,
                     0., 0., 1.]
 
-    # Only /Odometry is needed; the clouds are for debugging in RViz (frame camera_init)
+    # /Odometry for go2w_driver and /cloud_registered (deskewed, frame camera_init) for
+    # lio_scan.py. dense: the whole cloud, not the 0.25 m voxel one
     publish:
       path_en: false
       effect_map_en: false
       map_en: false
       scan_publish_en: true
-      dense_publish_en: false
+      dense_publish_en: true
       scan_bodyframe_pub_en: false
 
     pcd_save:

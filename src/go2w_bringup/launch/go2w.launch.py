@@ -43,6 +43,18 @@ def generate_launch_description():
                 LaunchConfiguration('sim'), "' != 'true'"])),
         ),
 
+        # /scan: with FAST-LIO, from its last second of clouds (one L1 cloud is too sparse)
+        Node(
+            package='go2w_bringup',
+            executable='lio_scan.py',
+            name='lio_scan',
+            parameters=[PathJoinSubstitution([bringup, 'config', 'lio_scan.yaml'])],
+            condition=IfCondition(PythonExpression([
+                "'", LaunchConfiguration('scan'), "' == 'true' and '",
+                LaunchConfiguration('lio'), "' == 'true' and '",
+                LaunchConfiguration('sim'), "' != 'true'"])),
+        ),
+
         Node(
             package='pointcloud_to_laserscan',
             executable='pointcloud_to_laserscan_node',
@@ -52,6 +64,7 @@ def generate_launch_description():
             remappings=[('cloud_in', '/utlidar/cloud'), ('scan', '/scan')],
             condition=IfCondition(PythonExpression([
                 "'", LaunchConfiguration('scan'), "' == 'true' and '",
+                LaunchConfiguration('lio'), "' != 'true' and '",
                 LaunchConfiguration('sim'), "' != 'true'"])),
         ),
 
