@@ -3,3 +3,11 @@ install/
 log/
 src/external/
 __pycache__/
+
+# NTRIP credentials (copy config/ntrip.env.example)
+config/ntrip.env
+
+# Mission Planner logs
+*.tlog
+*.tlog.raw
+mav.parm

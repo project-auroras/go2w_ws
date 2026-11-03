@@ -1,0 +1,36 @@
+# person_follower: /people -> /cmd_vel (go2w_driver recorta a max_vx / max_wz)
+person_follower:
+  ros__parameters:
+    input_topic: /people
+    cmd_vel_topic: /cmd_vel
+    target_id: ""               # "" = la persona más cercana; luego se queda con su ID
+    target_distance: 1.5        # m a los que se queda de la persona
+    distance_deadband: 0.15     # m, no avanza si está a menos de target_distance + esto
+    max_range: 8.0              # m, ignora detecciones más lejanas
+    k_linear: 0.6
+    k_angular: 1.5
+    max_linear: 0.5             # m/s
+    max_angular: 0.8            # rad/s
+    turn_in_place_angle: 0.6    # rad (~34 deg), con más desvío gira sin avanzar
+    lost_timeout: 1.0           # s sin verla -> se para y suelta el ID
+    rate: 10.0
+
+# fake_person: personas virtuales para probar sin cámara (person_follower_sim.launch.py)
+fake_person:
+  ros__parameters:
+    world_frame: odom
+    camera_frame: camera_color_optical_frame
+    output_topic: /people
+    rate: 15.0
+    hfov_deg: 69.0              # RealSense D435 color
+    min_range: 0.3
+    max_range: 6.0
+    noise: 0.03                 # sigma = 3 % de la distancia
+    dropout: 0.1                # 10 % de frames sin detección
+    person_height: 1.7
+    speed: 0.4                  # m/s de la persona 1
+    pause: 2.0                  # s parada en cada punto
+    # recorrido en bucle de la persona 1, x0 y0 x1 y1 ... (el robot empieza en 0 0 mirando a +x)
+    path: [3.0, 0.0, 7.0, 0.0, 7.0, 4.0, 2.0, 4.0, 2.0, 1.0]
+    # persona 2 (distracción): [] para quitarla
+    distractor_path: [6.0, -3.0, 6.0, -1.5]

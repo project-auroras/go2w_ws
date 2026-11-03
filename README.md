@@ -8,6 +8,7 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 | `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `sportmodestate` → `/odom` y TF `odom → base_footprint → base_link`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
 | `go2w_bringup` | Lanza description + driver + `/utlidar/cloud` → `/scan` + RViz |
 | `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
+| `go2w_perception` | Detección de personas con YOLO26 (`yolo_ros`) en la RealSense: `people_bag.launch.py` alinea la profundidad del rosbag al color, lanza `yolo_node` (detección + tracking + 3D) y `person_filter` publica solo las personas en `/people` |
 
 Paquetes de terceros copiados como código en `src/` (sin `.git`; para actualizarlos, sustituir la carpeta por la nueva versión y anotar aquí el commit):
 
@@ -65,6 +66,8 @@ colcon build --symlink-install
 source scripts/env.sh
 ```
 
+ArduPilot SITL + Mission Planner + NTRIP (contenedor `go2w-ardu`): ver [MISSIONPLANNER.md](MISSIONPLANNER.md).
+
 ### NX
 
 ```bash
@@ -118,6 +121,34 @@ ros2 launch go2w_nav_test waypoint_follower.launch.py
 ros2 launch go2w_bringup go2w.launch.py sim:=true               # en simulación (sin /scan)
 ros2 launch go2w_nav_test waypoint_follower.launch.py   # con use_scan: false en el yaml
 ```
+
+### Detección de personas (YOLO26, `go2w_perception`)
+
+`yolo_ros` es C++ con ONNX Runtime; el modelo (`yolo26s.onnx`) se descarga solo de Hugging Face (`unileon-robotics/YOLO26-ONNX`) la primera vez. La imagen Docker trae CUDA 13 + cuDNN 9 (la RTX 50xx necesita CUDA 13), pero `yolo_onnxruntime_vendor` compila para CPU salvo que se le pida GPU:
+
+```bash
+# dentro del contenedor, una vez (borra la compilación CPU anterior)
+rm -rf build/yolo_onnxruntime_vendor build/yolo_ros install/yolo_onnxruntime_vendor install/yolo_ros
+scripts/install_deps.sh ws        # depth_image_proc
+colcon build --symlink-install --packages-up-to go2w_perception --cmake-args -DONNX_GPU=ON -DONNX_CUDA_MAJOR=13
+source scripts/env.sh
+```
+
+Los rosbags se montan en `/bags` desde `~/rosbags` del host (otra carpeta con `BAGS_DIR=...`). Con el rosbag de la RealSense:
+
+```bash
+ros2 launch go2w_perception people_bag.launch.py
+ros2 bag play /bags/rosbag2_2026_10_28-10_44_19 --loop \
+  --topics /camera/camera/color/image_raw /camera/camera/color/camera_info \
+           /camera/camera/depth/image_rect_raw /camera/camera/depth/camera_info
+ros2 run rqt_image_view rqt_image_view /yolo/cam0/debug_image
+ros2 topic echo /people           # yolo_msgs/DetectionArray, bbox3d.center = x y z (m)
+```
+
+- El log de `yolo_node` debe decir `Using execution provider: cuda`; si dice `cpu`, falta cuDNN o no se compiló con `-DONNX_GPU=ON`.
+- Las posiciones 3D están en `camera_color_optical_frame` (z hacia delante, x derecha, y abajo): los rosbags no tienen TF a `base_link`. Los extrínsecos depth → color están fijos en `people_bag.launch.py` (leídos del topic `extrinsics/depth_to_color` del rosbag).
+- Con la cámara real no hace falta alinear: lanzar la RealSense con `align_depth.enable:=true` y usar `aligned_depth_to_color`.
+- Los pesos de Ultralytics (YOLO26) son AGPL-3.0, no MIT como `yolo_ros`.
 
 ## Pendiente de verificar en el robot
 

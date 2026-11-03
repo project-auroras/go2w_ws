@@ -18,6 +18,7 @@ services:
       - ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}
     volumes:
       - ..:/ws
+      - ${BAGS_DIR:-${HOME}/rosbags}:/bags   # rosbags (BAGS_DIR overrides the folder)
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     devices:
       - /dev/dri:/dev/dri
