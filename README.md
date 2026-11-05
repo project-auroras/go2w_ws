@@ -11,17 +11,19 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 | `worlds/gis_*` | Mundos generados con `navmap_gis_tool` (`gis_mic_recinto_world`: recinto del MIC, León) |
 | `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
 
-Paquetes de terceros copiados como código en `src/third_party/` (sin `.git`, sin cambios respecto al original; para actualizarlos, sustituir la carpeta por la nueva versión y anotar aquí el commit):
+Dependencias externas, en `deps.repos` con commits fijos. `scripts/install_deps.sh ws` las clona en `src/external/` (no versionado); para actualizar una, cambiar su `version` en `deps.repos` y volver a ejecutarlo:
 
 | Paquete | Origen | Versión | Commit |
 |---|---|---|---|
+| `unitree_go`, `unitree_api`, `go2_interfaces` | [Unitree-Go2-Robot](https://github.com/Unitree-Go2-Robot) | | ver `deps.repos` |
+| `fast_lio_go2` | [aron-assani/fast_lio_go2](https://github.com/aron-assani/fast_lio_go2) (FAST-LIO2 con soporte de `/utlidar/cloud`) | | `540b85b` |
 | `EasyNavigation` | [EasyNavigation/EasyNavigation](https://github.com/EasyNavigation/EasyNavigation) | 0.5.0 | `9ca3cca` |
 | `easynav_plugins` | [EasyNavigation/easynav_plugins](https://github.com/EasyNavigation/easynav_plugins) | 0.5.0 | `2580d29` |
 | `NavMap` | [EasyNavigation/NavMap](https://github.com/EasyNavigation/NavMap) | 0.6.0 | `c96d8c8` |
 | `yaets` | [fmrico/yaets](https://github.com/fmrico/yaets) | 1.2.0 | `1452f14` |
 | `yolo_ros` | [mgonzs13/yolo_ros](https://github.com/mgonzs13/yolo_ros) | 5.0.0 | `7924a8b` |
 
-Dependencias externas (en `deps.repos`, con commits fijos): `unitree_go`, `unitree_api`, `go2_interfaces` de [Unitree-Go2-Robot](https://github.com/Unitree-Go2-Robot), y [fast_lio_go2](https://github.com/aron-assani/fast_lio_go2) (FAST-LIO2 con soporte de `/utlidar/cloud`). `src/third_party/livox_ros_driver2` tiene solo los mensajes de Livox que necesita `fast_lio` para compilar.
+`src/third_party/livox_ros_driver2` es lo único de terceros versionado aquí: solo los mensajes de Livox que necesita `fast_lio` para compilar (no existe como repo aparte).
 
 ## Estructura
 
@@ -29,7 +31,7 @@ Dependencias externas (en `deps.repos`, con commits fijos): `unitree_go`, `unitr
 src/
   go2w_*/         paquetes propios
   worlds/         mundos de Gazebo (navmap_gis_tool)
-  third_party/    código de terceros copiado tal cual (ver tabla de arriba)
+  third_party/    livox_ros_driver2 recortado (solo mensajes)
   external/       repos de deps.repos (no versionado, lo crea install_deps.sh)
 config/           parámetros de EasyNav y slam_toolbox
 scripts/          instalación, entorno, red PC/NX
@@ -158,4 +160,4 @@ Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con 
 
 ## Siguiente paso: EasyNav
 
-EasyNav 0.5.0 (EasyNavigation, easynav_plugins, NavMap, yaets) está en `src/third_party/` como código; se compila con el resto del workspace.
+EasyNav 0.5.0 (EasyNavigation, easynav_plugins, NavMap, yaets) se clona en `src/external/` desde `deps.repos`; se compila con el resto del workspace.

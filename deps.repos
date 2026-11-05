@@ -18,3 +18,24 @@ repositories:
     type: git
     url: https://github.com/aron-assani/fast_lio_go2.git
     version: 540b85bfa2d77e9547da59a9c93089224a1c2f3e
+  # EasyNav 0.5.0 stack (navigation) and yolo_ros 5.0.0.
+  EasyNavigation:
+    type: git
+    url: https://github.com/EasyNavigation/EasyNavigation.git
+    version: 9ca3cca7fbfd1bab1e7266625d6f42ecf4857d4e
+  easynav_plugins:
+    type: git
+    url: https://github.com/EasyNavigation/easynav_plugins.git
+    version: 2580d29baefe77305c6e9336dca743aa5ce51c2c
+  NavMap:
+    type: git
+    url: https://github.com/EasyNavigation/NavMap.git
+    version: c96d8c81ac50ac98b4d9c837ffa39dba21b6f042
+  yaets:
+    type: git
+    url: https://github.com/fmrico/yaets.git
+    version: 1452f142a85d2bab00329b209f5ec15cf4001a97
+  yolo_ros:
+    type: git
+    url: https://github.com/mgonzs13/yolo_ros.git
+    version: 7924a8be76c81f4051370e254677516ca696a272
