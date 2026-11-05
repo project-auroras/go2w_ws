@@ -4,11 +4,12 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 
 | Paquete | Qué hace |
 |---|---|
-| `go2w_description` | URDF y mallas del Go2-W (de `unitreerobotics/unitree_ros`), con raíz `base_link` y frame `utlidar_lidar` |
+| `go2w_description` | URDF y mallas del Go2-W (de `unitreerobotics/unitree_ros`), con raíz `base_link`, frame `utlidar_lidar` y la RealSense D435i (`camera_link`, medida en el soporte delantero) |
 | `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `sportmodestate` → `/odom` y TF `odom → base_footprint → base_link`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
 | `go2w_bringup` | Lanza description + driver + `/utlidar/cloud` → `/scan` + RViz |
 | `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
 | `go2w_perception` | Detección de personas con YOLO26 (`yolo_ros`) en la RealSense: `people_bag.launch.py` alinea la profundidad del rosbag al color, lanza `yolo_node` (detección + tracking + 3D) y `person_filter` publica solo las personas en `/people` |
+| `go2w_gazebo` | Simulación en Gazebo Fortress: escena con objetos y una persona que camina, el Go2-W con RealSense simulada, YOLO26 y sigue-personas. Ver [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md) |
 
 Paquetes de terceros copiados como código en `src/` (sin `.git`; para actualizarlos, sustituir la carpeta por la nueva versión y anotar aquí el commit):
 
@@ -149,6 +150,18 @@ ros2 topic echo /people           # yolo_msgs/DetectionArray, bbox3d.center = x 
 - Las posiciones 3D están en `camera_color_optical_frame` (z hacia delante, x derecha, y abajo): los rosbags no tienen TF a `base_link`. Los extrínsecos depth → color están fijos en `people_bag.launch.py` (leídos del topic `extrinsics/depth_to_color` del rosbag).
 - Con la cámara real no hace falta alinear: lanzar la RealSense con `align_depth.enable:=true` y usar `aligned_depth_to_color`.
 - Los pesos de Ultralytics (YOLO26) son AGPL-3.0, no MIT como `yolo_ros`.
+
+### Simulación en Gazebo (detección de objetos y sigue-personas, `go2w_gazebo`)
+
+Guía completa en [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md). En resumen, dentro del contenedor:
+
+```bash
+scripts/install_deps.sh ws                                     # instala Gazebo Fortress (ros_gz)
+colcon build --symlink-install --packages-select go2w_gazebo
+source scripts/env.sh
+ros2 launch go2w_gazebo simulacion.launch.py                       # detección de objetos
+ros2 launch go2w_gazebo simulacion.launch.py follower:=true y:=7.0 # sigue-personas
+```
 
 ## Pendiente de verificar en el robot
 

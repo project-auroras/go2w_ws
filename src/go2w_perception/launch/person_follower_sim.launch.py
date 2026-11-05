@@ -6,10 +6,10 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
-# base_link -> camera_color_optical_frame. PROVISIONAL: posición estimada de la
-# RealSense en el frontal; medir en el robot y pasarlo al URDF.
-# x y z yaw pitch roll (la rotación es la de un frame óptico: z delante, x derecha)
-CAMERA_TF = ['0.30', '0.0', '0.10', '-1.5708', '0.0', '-1.5708']
+# base_link -> camera_link viene del URDF (go2w_description, medido en el robot).
+# Aquí solo camera_link -> camera_color_optical_frame, que en el robot real publica
+# el driver de la RealSense. x y z yaw pitch roll (frame óptico: z delante, x derecha)
+CAMERA_TF = ['0.0', '0.0', '0.0', '-1.5708', '0.0', '-1.5708']
 
 
 def generate_launch_description():
@@ -35,7 +35,7 @@ def generate_launch_description():
             arguments=[
                 '--x', CAMERA_TF[0], '--y', CAMERA_TF[1], '--z', CAMERA_TF[2],
                 '--yaw', CAMERA_TF[3], '--pitch', CAMERA_TF[4], '--roll', CAMERA_TF[5],
-                '--frame-id', 'base_link', '--child-frame-id', 'camera_color_optical_frame'],
+                '--frame-id', 'camera_link', '--child-frame-id', 'camera_color_optical_frame'],
         ),
 
         Node(package='go2w_perception', executable='fake_person',

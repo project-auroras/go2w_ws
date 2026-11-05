@@ -33,7 +33,7 @@ Gazebo (ruedas, DiffDrive) ◄──ros_gz_bridge── /cmd_vel ◄────
 `urdf/go2w_gazebo.urdf.xacro` incluye el URDF de `go2w_description` y le añade:
 - **Patas:** un controlador de posición en cada articulación que las sujeta en la postura de pie. No camina con las patas.
 - **Ruedas:** tracción diferencial con las 4 ruedas. Lee `/cmd_vel` y publica `/odom` y la TF `odom → base_link`.
-- **RealSense simulada:** cámara RGB-D de 69°, 640x480 y 15 Hz. La posición (30 cm delante y 10 cm arriba de `base_link`) es **provisional**: hay que medirla en el robot.
+- **RealSense simulada:** cámara RGB-D de 69°, 640x480 y 15 Hz, en el `camera_link` del URDF de `go2w_description`: la posición medida en el robot real (31,8 cm delante y 10 cm arriba de `base_link`, inclinada 20° hacia arriba).
 - **Ruedas con poco agarre lateral:** con 4 ruedas fijas, el robot gira derrapando. Con mucho agarre no giraba y llegaba a volcar.
 
 `launch/escena.launch.py` cambia la colisión de las ruedas (que en el URDF original es la malla 3D) por un cilindro. Con la malla, la simulación iba unas 1.000 veces más lenta que el tiempo real.

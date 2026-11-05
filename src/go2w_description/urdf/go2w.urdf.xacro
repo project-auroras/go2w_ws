@@ -755,4 +755,33 @@
   </joint>
   <link name="utlidar_lidar"/>
 
+  <!-- ===== RealSense D435i en el soporte delantero de fábrica =====
+       Medido en el robot el 2026-11-05, con el robot de pie, respecto a base_link
+       (centro del cuerpo: a la altura de los motores de los muslos y a mitad entre
+       los delanteros y los traseros):
+         x = 0.193 (motor delantero) + 0.125 (motor -> cristal) = 0.318 m
+         z = 0.54 (suelo -> cámara) - 0.44 (suelo -> motor)      = 0.10 m
+         inclinada 20 deg hacia ARRIBA -> pitch = -0.349 rad
+       Solo se define base_link -> camera_link. Los frames internos de la cámara
+       (camera_color_optical_frame, camera_depth_optical_frame...) los publica el driver
+       realsense2_camera: si estuvieran también aquí, tendrían dos padres. -->
+  <xacro:property name="camera_x" value="0.318"/>
+  <xacro:property name="camera_y" value="0.0"/>
+  <xacro:property name="camera_z" value="0.10"/>
+  <xacro:property name="camera_pitch" value="-0.349"/>
+
+  <joint name="camera_joint" type="fixed">
+    <origin xyz="${camera_x} ${camera_y} ${camera_z}" rpy="0 ${camera_pitch} 0"/>
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+  </joint>
+  <link name="camera_link">
+    <!-- solo para verla en RViz: caja de 90 x 25 x 25 mm detrás del cristal -->
+    <visual>
+      <origin xyz="-0.0125 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.025 0.090 0.025"/></geometry>
+      <material name="realsense_gray"><color rgba="0.6 0.6 0.65 1"/></material>
+    </visual>
+  </link>
+
 </robot>

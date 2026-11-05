@@ -4,7 +4,8 @@
   + plugins para que se tenga de pie y ruede.
   - Patas: JointPositionController sujeta cada articulación en la postura de pie.
   - Ruedas: DiffDrive (4 ruedas, como el Go2-W real) lee /cmd_vel y publica odom + TF.
-  - Cámara: rgbd_camera con los datos de la D435 (69 deg, 640x480).
+  - Cámara: rgbd_camera con los datos de la D435i (69 deg, 640x480), en el camera_link
+    del URDF (soporte delantero, 20 deg hacia arriba).
 -->
 <robot name="go2w" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
@@ -14,16 +15,10 @@
   <xacro:property name="stand_thigh" value="0.67"/>
   <xacro:property name="stand_calf" value="-1.3"/>
 
-  <!-- ===== RealSense: PROVISIONAL, medir en el robot ===== -->
-  <xacro:property name="cam_x" value="0.30"/>
-  <xacro:property name="cam_z" value="0.10"/>
-
-  <link name="camera_link"/>
-  <joint name="camera_joint" type="fixed">
-    <origin xyz="${cam_x} 0 ${cam_z}" rpy="0 0 0"/>
-    <parent link="base_link"/>
-    <child link="camera_link"/>
-  </joint>
+  <!-- ===== RealSense =====
+       camera_link (base_link -> camera_link, medido en el robot) viene del URDF de
+       go2w_description. Aquí se añade lo que en el robot real publica el driver
+       realsense2_camera: el frame óptico y el propio sensor. -->
   <!-- frame óptico: z delante, x derecha, y abajo (como la RealSense real) -->
   <link name="camera_color_optical_frame"/>
   <joint name="camera_optical_joint" type="fixed">

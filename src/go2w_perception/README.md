@@ -150,7 +150,7 @@ fake_person ──► /people ──► person_follower ──► /cmd_vel ─�
 
 - `fake_person`: dos personas recorren `path` y `distractor_path` en el frame `odom`. Solo publica en `/people` las que caen dentro del campo de visión de la RealSense (69° y de 0,3 a 6 m), con ruido y un 10 % de fallos de detección. Usa el mismo formato que `person_filter`, en `camera_color_optical_frame`.
 - `person_follower`: escoge la persona más cercana y se queda con su ID. Avanza hasta quedarse a `target_distance` y gira para tenerla centrada. Si no la ve durante `lost_timeout`, se para y suelta el ID. Nunca va marcha atrás.
-- En el launch, el TF `base_link → camera_color_optical_frame` es una posición **provisional** de la cámara.
+- La posición de la cámara sale del URDF (`base_link → camera_link`, medida en el robot); el launch solo añade `camera_link → camera_color_optical_frame`, que en el robot real publica el driver.
 - Los parámetros de los dos nodos están en `config/person_follower.yaml`.
 
 ```bash
@@ -192,6 +192,6 @@ Probar `person_follower` con el rosbag real, sin robot: lanza `people_bag.launch
 
 - Los rosbags no tienen `/tf_static`. Los extrínsecos depth→color de la RealSense se leyeron del topic `/camera/camera/extrinsics/depth_to_color` del bag y están fijos en `people_bag.launch.py`.
 - Con la cámara real no hace falta `RegisterNode`: basta con lanzar `realsense2_camera` con `align_depth.enable:=true` y usar `aligned_depth_to_color/image_raw`.
-- Las posiciones 3D están en el frame de la cámara. Para usarlas en el robot falta el TF `base_link → camera_link` en el URDF.
+- Las posiciones 3D están en el frame de la cámara: los rosbags de octubre no tienen TF. La posición de la cámara en el robot (`base_link → camera_link`) ya está en el URDF de `go2w_description`, así que con la cámara real se puede poner `target_frame: base_link`.
 - `src/yolo_ros` es código de terceros (v5.0.0) y no se modifica.
 - Los pesos YOLO26 de Ultralytics tienen licencia AGPL-3.0.
