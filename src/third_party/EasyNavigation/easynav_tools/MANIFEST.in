@@ -1,3 +1,0 @@
-recursive-include easynav_tools *
-prune easynav_tools/scripts
-prune easynav_tools/vendor/textual/demo
