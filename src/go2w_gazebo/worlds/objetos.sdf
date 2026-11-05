@@ -1,0 +1,160 @@
+<?xml version="1.0"?>
+<!-- Escena para probar la detección de objetos con el Go2-W.
+     El robot se añade desde el launch en (0, 0) mirando a +x.
+     Los modelos <include> se descargan de Gazebo Fuel la primera vez
+     (se guardan en ~/.ignition/fuel). -->
+<sdf version="1.8">
+  <world name="objetos">
+
+    <!-- Física, escena y plugins básicos del servidor -->
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
+    <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
+    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
+    <plugin filename="ignition-gazebo-sensors-system" name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <scene>
+      <ambient>0.6 0.6 0.6 1</ambient>
+      <background>0.7 0.8 0.95 1</background>
+      <shadows>true</shadows>
+    </scene>
+
+    <!-- Luz -->
+    <light type="directional" name="sol">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <direction>-0.5 0.2 -0.9</direction>
+    </light>
+
+    <!-- Suelo -->
+    <model name="suelo">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.5 0.5 0.5 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== Objetos de Gazebo Fuel (https://app.gazebosim.org/fuel/models) =====
+         pose = x y z roll pitch yaw (m y rad) en el mundo -->
+
+    <!-- Personas (clase COCO "person") -->
+    <include>
+      <name>persona_de_pie</name>
+      <pose>4 0 0 0 0 3.14</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Standing person</uri>
+    </include>
+    <include>
+      <name>persona_andando</name>
+      <pose>6 -2 0 0 0 2.5</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Walking person</uri>
+    </include>
+    <include>
+      <name>mujer</name>
+      <pose>5 2.5 0 0 0 -2.2</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Casual female</uri>
+    </include>
+
+    <!-- Mobiliario ("chair", "dining table") -->
+    <include>
+      <name>mesa</name>
+      <pose>3 -3 0 0 0 0</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Table</uri>
+    </include>
+    <include>
+      <name>silla</name>
+      <pose>2.5 3 0 0 0 1.57</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Chair</uri>
+    </include>
+
+    <!-- Exterior ("fire hydrant", "stop sign", "car") -->
+    <include>
+      <name>boca_de_incendios</name>
+      <pose>8 1 0 0 0 0</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Fire hydrant</uri>
+    </include>
+    <include>
+      <name>stop</name>
+      <pose>9 -1.5 0 0 0 1.57</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Stop Sign</uri>
+    </include>
+    <include>
+      <name>coche</name>
+      <pose>12 3 0 0 0 0</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Hatchback</uri>
+    </include>
+
+    <!-- No es una clase COCO: sirve para ver que YOLO no da falsos positivos -->
+    <include>
+      <name>cono</name>
+      <pose>2 -1 0 0 0 0</pose>
+      <uri>https://fuel.gazebosim.org/1.0/OpenRobotics/models/Construction Cone</uri>
+    </include>
+
+    <!-- Objeto hecho a mano (sin Fuel): una caja roja de 0.5 m -->
+    <model name="caja">
+      <static>true</static>
+      <pose>3 1 0.25 0 0 0.4</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.5 0.5 0.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.5 0.5 0.5</size></box></geometry>
+          <material>
+            <ambient>0.8 0.1 0.1 1</ambient>
+            <diffuse>0.8 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ===== Persona que camina (para el sigue-personas) =====
+         Recorre en bucle un rectángulo de 6 x 3 m entre x 3..9 e y 7..10 a ~0.4 m/s,
+         lejos de los objetos. Para seguirla, poner el robot en (0, 7):
+         ros2 launch go2w_gazebo simulacion.launch.py follower:=true y:=7.0
+         Un actor no tiene colisión: el robot no choca con ella. -->
+    <actor name="persona_caminando">
+      <skin>
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walk">
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walk" tension="0.6">
+          <waypoint><time>0</time><pose>3 7 1.0 0 0 0</pose></waypoint>
+          <waypoint><time>15</time><pose>9 7 1.0 0 0 0</pose></waypoint>
+          <waypoint><time>16</time><pose>9 7 1.0 0 0 1.5708</pose></waypoint>
+          <waypoint><time>23.5</time><pose>9 10 1.0 0 0 1.5708</pose></waypoint>
+          <waypoint><time>24.5</time><pose>9 10 1.0 0 0 3.1416</pose></waypoint>
+          <waypoint><time>39.5</time><pose>3 10 1.0 0 0 3.1416</pose></waypoint>
+          <waypoint><time>40.5</time><pose>3 10 1.0 0 0 -1.5708</pose></waypoint>
+          <waypoint><time>48</time><pose>3 7 1.0 0 0 -1.5708</pose></waypoint>
+          <waypoint><time>49</time><pose>3 7 1.0 0 0 0</pose></waypoint>
+        </trajectory>
+      </script>
+    </actor>
+
+  </world>
+</sdf>
