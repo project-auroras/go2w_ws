@@ -11,3 +11,6 @@ config/ntrip.env
 *.tlog
 *.tlog.raw
 mav.parm
+
+# modelos descargados por yolo_ros (cache_dir de los yaml)
+models/

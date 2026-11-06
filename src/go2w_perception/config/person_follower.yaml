@@ -7,9 +7,12 @@ person_follower:
     target_distance: 1.5        # m a los que se queda de la persona
     distance_deadband: 0.15     # m, no avanza si está a menos de target_distance + esto
     max_range: 8.0              # m, ignora detecciones más lejanas
-    k_linear: 0.6
+    k_linear: 1.0               # m/s por cada m de más: acelera antes al alejarse la persona
     k_angular: 1.5
-    max_linear: 0.5             # m/s
+    max_linear: 0.8             # m/s hacia delante (go2w_driver limita a max_vx 1.0)
+    backoff_distance: 1.3       # m desde base_link (~1 m desde el morro): más cerca -> marcha atrás
+    k_backoff: 1.0
+    max_backward: 0.3           # m/s hacia atrás (detrás no hay cámara: despacio)
     max_angular: 0.8            # rad/s
     turn_in_place_angle: 0.6    # rad (~34 deg), con más desvío gira sin avanzar
     stop_timeout: 0.5           # s sin verla -> se para (pero la recuerda)

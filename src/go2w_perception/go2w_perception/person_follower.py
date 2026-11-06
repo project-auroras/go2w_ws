@@ -15,7 +15,8 @@ class PersonFollower(Node):
 
     Elige la persona más cercana (a menos de max_start_distance) y se queda con su
     ID de tracking. Avanza para mantener target_distance y gira para tenerla
-    centrada. Nunca va marcha atrás.
+    centrada. Si la persona se le acerca a menos de backoff_distance, retrocede
+    (despacio, max_backward) sin dejar de mirarla.
 
     Si deja de verla: a los stop_timeout s se para, pero la sigue recordando hasta
     lost_timeout. Si mientras tanto aparece una detección a menos de
@@ -35,9 +36,13 @@ class PersonFollower(Node):
         self.target_distance = p('target_distance', 1.5).value
         self.distance_deadband = p('distance_deadband', 0.15).value
         self.max_range = p('max_range', 8.0).value
-        self.k_linear = p('k_linear', 0.6).value
+        self.k_linear = p('k_linear', 1.0).value
         self.k_angular = p('k_angular', 1.5).value
-        self.max_linear = p('max_linear', 0.5).value
+        self.max_linear = p('max_linear', 0.8).value
+        # marcha atrás si la persona se acerca a menos de backoff_distance (desde base_link)
+        self.backoff_distance = p('backoff_distance', 1.3).value
+        self.k_backoff = p('k_backoff', 1.0).value
+        self.max_backward = p('max_backward', 0.3).value
         self.max_angular = p('max_angular', 0.8).value
         self.turn_in_place_angle = p('turn_in_place_angle', 0.6).value  # rad
         self.stop_timeout = p('stop_timeout', 0.5).value
@@ -132,7 +137,11 @@ class PersonFollower(Node):
         cmd.angular.z = clamp(self.k_angular * bearing, self.max_angular)
 
         error = distance - self.target_distance
-        if error > self.distance_deadband and abs(bearing) < self.turn_in_place_angle:
+        if distance < self.backoff_distance:
+            # la persona viene hacia el robot: retrocede (no hay cámara detrás: despacio)
+            cmd.linear.x = -min(self.k_backoff * (self.backoff_distance - distance),
+                                self.max_backward)
+        elif error > self.distance_deadband and abs(bearing) < self.turn_in_place_angle:
             # avanza menos cuanto más ladeada esté la persona
             cmd.linear.x = min(self.k_linear * error, self.max_linear) * math.cos(bearing)
 

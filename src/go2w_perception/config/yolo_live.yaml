@@ -17,6 +17,8 @@
       plugin: yolo_ros/DetectionPlugin
       model_repo: unileon-robotics/YOLO26-ONNX
       model_filename: yolo26s.onnx
+      # en /ws (el repo montado) para que el modelo no se pierda al cerrar el contenedor (--rm)
+      cache_dir: /ws/models/huggingface
       threshold: 0.5
       iou: 0.45
       n_threads: -1

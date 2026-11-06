@@ -21,9 +21,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('follower', default_value='false',
                               description='true: el robot sigue a la persona (se MUEVE)'),
-        DeclareLaunchArgument('max_linear', default_value='0.3',
+        DeclareLaunchArgument('max_linear', default_value='0.6',
                               description='m/s máximos del sigue-personas'),
-        DeclareLaunchArgument('max_angular', default_value='0.6',
+        DeclareLaunchArgument('max_angular', default_value='0.8',
                               description='rad/s máximos del sigue-personas'),
 
         # JPEG -> imagen (color)

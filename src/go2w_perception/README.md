@@ -220,13 +220,14 @@ ros2 topic echo /people --field detections             # bbox3d.center.position 
 Sigue-personas (**el robot se mueve**: zona despejada y alguien con el mando):
 
 ```bash
-ros2 launch go2w_perception people_live.launch.py follower:=true            # 0.3 m/s, 0.6 rad/s
+ros2 launch go2w_perception people_live.launch.py follower:=true            # 0.6 m/s, 0.8 rad/s
 ros2 launch go2w_perception people_live.launch.py follower:=true max_linear:=0.2
 ```
 
 - Antes de `follower:=true`, mira con `follower:=false` y `ros2 run go2w_perception person_follower` + `ros2 topic echo /cmd_vel` que las órdenes tienen sentido (persona a la derecha → `angular.z` negativo).
 - `go2w_driver` para el robot si no recibe `/cmd_vel` en 0,5 s: si el WiFi se corta, se para.
-- Todavía no hay parada por obstáculo: el robot no frena ante algo que no sea la persona.
+- **No frena ante obstáculos**: solo sigue a la persona. Zona despejada y alguien con el mando.
+- Si la persona se acerca a menos de `backoff_distance` (1,3 m del centro, ~1 m del morro), retrocede a `max_backward` (0,3 m/s) sin dejar de mirarla. Detrás no hay cámara: hace falta espacio libre detrás del robot.
 - Con la cámara real, ByteTrack cambia a menudo el ID de la persona (de cerca, o cuando llegan frames a saltos por el WiFi). Por eso `person_follower`:
   - se **para** a los `stop_timeout` (0,5 s) sin verla, pero la **recuerda** durante `lost_timeout` (3 s);
   - si mientras tanto aparece una detección a menos de `reacquire_radius` (1 m) de donde estaba, se **reengancha** a ella aunque tenga otro ID (`Persona X reenganchada como Y`);

@@ -169,7 +169,7 @@ Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con 
 
 1. **Frame de la nube**: `/utlidar/cloud` debe salir alineada con el suelo en RViz. Si no, ajustar `utlidar_lidar_joint` en el URDF.
 2. **Odometría**: comprobar que `velocity` de `sportmodestate` está en el frame del mundo y que la altura de `base_link` es razonable (`base_height_offset`).
-3. **Move en modo ruedas**: confirmar que el Go2-W acepta la API 1008 igual que el Go2. Probar con el robot en espacio libre y velocidades bajas.
+3. ~~**Move en modo ruedas**~~ Verificado (2026-11-06): el Go2-W acepta la API 1008 (Move) como el Go2. Hace falta `ROS_DOMAIN_ID=0` (el software de Unitree está en el dominio 0) y `balance_stand` antes de moverlo: `stand_up` lo deja bloqueado.
 4. **QoS**: si algún topic de Unitree no llega, revisar `ros2 topic info -v`.
 
 ## Siguiente paso: EasyNav
