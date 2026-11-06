@@ -5,7 +5,30 @@
 controller_node:
   ros__parameters:
     use_sim_time: true
-    controller_types: [simple]
+    # regulated_pp follows the path in smooth arcs; simple (PID to a point 0.6 m ahead) went
+    # stop-turn-go: it drops linear speed to 0 while it turns (vlin - k_rot * |vrot|)
+    controller_types: [regulated_pp]
+    regulated_pp:
+      rt_freq: 30.0
+      plugin: easynav_regulated_pp_controller/RegulatedPurePursuitController
+      # carrot ahead of the robot: 0.5 m at rest, up to 1.5 m at speed (A* path is through
+      # the NavMap triangles, ~0.7 m: a long lookahead smooths its zigzag)
+      use_velocity_scaled_lookahead_dist: true
+      lookahead_time: 1.5
+      min_lookahead_dist: 0.6
+      max_lookahead_dist: 1.5
+      # rotate in place only when the path turns sharply (> 45 deg), and at the final goal
+      use_rotate_to_heading: true
+      rotate_to_heading_min_angle: 0.785
+      rotate_to_heading_angular_vel: 0.8
+      use_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 0.9
+      regulated_linear_scaling_min_speed: 0.15
+      approach_velocity_scaling_dist: 0.8
+      min_approach_linear_velocity: 0.1
+      allow_reversing: false
+      # obstacles are already in the NavMap (A* + inflation): no extra slow-down here
+      use_obstacle_regulated_linear_velocity_scaling: false
     simple:
       rt_freq: 30.0
       plugin: easynav_simple_controller/SimpleController
@@ -17,6 +40,9 @@ controller_node:
       max_linear_vel: 0.5
       min_linear_vel: 0.0
       max_angular_vel: 1.0
+      max_linear_acc: 1.0
+      max_linear_decel: 1.0
+      max_angular_acc: 2.0
 
 # /odom of the sim is ground truth: map -> odom only aligns the frames (identity here).
 # On the real robot this would fuse FAST-LIO /odom (+ /gps/fix).
