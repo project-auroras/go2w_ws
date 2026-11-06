@@ -1,0 +1,133 @@
+# EasyNav on the real Go2-W, local flat map (first tests).
+#   robot (NX): ros2 launch go2w_bringup go2w.launch.py      (lio:=true: FAST-LIO /odom + lio_scan /scan)
+#   then:       ros2 run easynav_system system_main --ros-args --params-file config/easynav_real.params.yaml
+# map = where the robot was switched on (FAST-LIO odom origin): map -> odom is identity.
+# NavMap: flat 40 x 40 m around the start, ground at z -0.5 (odom is at body height).
+# Obstacles only from /scan (lio_scan: 1 s of FAST-LIO clouds, robot body and floor removed).
+# Goals: RViz "NavMap Goal Pose" (g) with Fixed Frame map.
+controller_node:
+  ros__parameters:
+    use_sim_time: false
+    # regulated_pp follows the path in smooth arcs; simple (PID to a point 0.6 m ahead) went
+    # stop-turn-go: it drops linear speed to 0 while it turns (vlin - k_rot * |vrot|)
+    controller_types: [regulated_pp]
+    regulated_pp:
+      rt_freq: 30.0
+      plugin: easynav_regulated_pp_controller/RegulatedPurePursuitController
+      # carrot ahead of the robot: 0.5 m at rest, up to 1.5 m at speed (A* path is through
+      # the NavMap triangles, ~0.7 m: a long lookahead smooths its zigzag)
+      use_velocity_scaled_lookahead_dist: true
+      lookahead_time: 1.5
+      min_lookahead_dist: 0.6
+      max_lookahead_dist: 1.5
+      # rotate in place only when the path turns sharply (> 45 deg), and at the final goal
+      use_rotate_to_heading: true
+      rotate_to_heading_min_angle: 0.785
+      rotate_to_heading_angular_vel: 0.5
+      use_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 0.9
+      regulated_linear_scaling_min_speed: 0.15
+      approach_velocity_scaling_dist: 0.8
+      min_approach_linear_velocity: 0.1
+      allow_reversing: false
+      # obstacles are already in the NavMap (A* + inflation): no extra slow-down here
+      use_obstacle_regulated_linear_velocity_scaling: false
+    simple:
+      rt_freq: 30.0
+      plugin: easynav_simple_controller/SimpleController
+      look_ahead_dist: 0.6
+      tolerance_dist: 0.1
+      final_goal_angle_tolerance: 0.15
+    # Same limits as go2w_driver (max_vx 1.0, max_wz 1.5), lower for the first tests
+    # First real tests: slow. go2w_driver allows up to max_vx 1.0, max_wz 1.5
+    robot_limits:
+      max_linear_vel: 0.3
+      min_linear_vel: 0.0
+      max_angular_vel: 0.6
+      max_linear_acc: 0.5
+      max_linear_decel: 1.0
+      max_angular_acc: 1.0
+
+# FAST-LIO /odom (go2w_driver, planar: z 0) -> robot_pose; map -> odom identity.
+localizer_node:
+  ros__parameters:
+    use_sim_time: false
+    localizer_types: [fusion]
+    fusion:
+      rt_freq: 50.0
+      freq: 5.0
+      reseed_freq: 0.1
+      plugin: easynav_fusion_localizer/FusionLocalizer
+      global_filter:
+        two_d_mode: false
+        publish_tf: true
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_footprint
+        world_frame: map
+        odom0: /odom
+        odom0_config:
+          [true,  true,  true,
+           true,  true,  true,
+           true,  false, false,
+           false, false, true,
+           false, false, false]
+        odom0_differential: false
+
+maps_manager_node:
+  ros__parameters:
+    use_sim_time: false
+    map_types: [navmap]
+    navmap:
+      freq: 10.0
+      plugin: easynav_navmap_maps_manager/NavMapMapsManager
+      package: go2w_bringup
+      navmap_path_file: maps/flat_40m.navmap
+      filters: [obstacles, inflation]
+      obstacles:
+        plugin: easynav_navmap_maps_manager/NavMapMapsManager/ObstaclesFilter
+        max_range: 10.0
+        # /scan points are at base_link height (~0.5 m over the flat map): all of them count
+        min_height: 0.25
+        max_height: 1.0
+      inflation:
+        plugin: easynav_navmap_maps_manager/NavMapMapsManager/InflationFilter
+        inflation_radius: 0.6
+
+planner_node:
+  ros__parameters:
+    use_sim_time: false
+    planner_types: [astar]
+    astar:
+      freq: 1.0
+      plugin: easynav_navmap_planner/AStarPlanner
+      continuous_replan: true
+
+sensors_node:
+  ros__parameters:
+    use_sim_time: false
+    forget_time: 0.5
+    sensors: [lidar]
+    perception_default_frame: odom
+    # not /utlidar/cloud: it has the robot's own body and the floor in it
+    lidar:
+      topic: /scan
+      type: sensor_msgs/msg/LaserScan
+      plugin: easynav_sensors/PointPerceptionHandler
+
+system_node:
+  ros__parameters:
+    use_sim_time: false
+    robot_frame: base_link
+    robot_footprint_frame: base_footprint
+    odom_frame: odom
+    map_frame: map
+    position_tolerance: 0.3
+    # Every goal (also intermediate waypoints) must match yaw too
+    angle_tolerance: 0.3
+    # odom/base_footprint are at body height, goals from the NavMap tool on the ground (-0.5)
+    height_tolerance: 1.0
+    # Go2-W footprint ~0.7 x 0.45 m
+    robot_geometry:
+      radius: 0.4
+      height: 0.6
