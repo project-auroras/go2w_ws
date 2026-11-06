@@ -99,7 +99,7 @@ source scripts/env.sh
 
 ```bash
 sudo apt install python3-vcstool python3-rosdep   # una sola vez
-git clone <repo> ~/go2w_ws && cd ~/go2w_ws
+git clone git@github.com:project-auroras/go2w_ws.git ~/go2w_ws && cd ~/go2w_ws
 scripts/install_deps.sh all                        # una sola vez
 scripts/nx_update.sh                               # cada vez que haya cambios
 GO2_IFACE=enP8p1s0 source scripts/env.sh          # interfaz de la NX en la red del robot
