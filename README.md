@@ -9,7 +9,6 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 | `go2w_bringup` | Lanza description + driver + FAST-LIO (`lio:=true`) + `/utlidar/cloud` → `/scan` + RViz |
 | `go2w_gazebo` | Go2-W en Gazebo Harmonic sobre mundos de `navmap_gis_tool` |
 | `worlds/gis_*` | Mundos generados con `navmap_gis_tool` (`gis_mic_recinto_world`: recinto del MIC, León) |
-| `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
 
 Dependencias externas, en `deps.repos` con commits fijos. `scripts/install_deps.sh ws` las clona en `src/external/` (no versionado); para actualizar una, cambiar su `version` en `deps.repos` y volver a ejecutarlo:
 
@@ -136,19 +135,6 @@ ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angula
 ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_down'"
 ```
 
-### Prueba de navegación (`go2w_nav_test`)
-
-Recorre los `waypoints` de `go2w_nav_test/config/waypoint_follower.yaml` (por defecto un cuadrado de 1 m a la izquierda), relativos a donde está el robot al arrancar el nodo. Va a 0.3 m/s y 0.5 rad/s como máximo. Se para mientras haya algo a menos de `stop_distance` (0.5 m) delante en `/scan`, y si dejan de llegar `/odom` o `/scan`. Termina al llegar al último waypoint; Ctrl+C lo para (el watchdog del driver detiene el robot en 0.5 s).
-
-```bash
-ros2 launch go2w_bringup go2w.launch.py                         # con el robot (publica /scan)
-ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_up'"
-ros2 launch go2w_nav_test waypoint_follower.launch.py
-
-ros2 launch go2w_bringup go2w.launch.py sim:=true               # en simulación (sin /scan)
-ros2 launch go2w_nav_test waypoint_follower.launch.py   # con use_scan: false en el yaml
-```
-
 ## Pendiente de verificar en el robot
 
 Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con las patas en el orden de Unitree.
@@ -158,6 +144,19 @@ Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con 
 3. **Move en modo ruedas**: confirmar que el Go2-W acepta la API 1008 igual que el Go2. Probar con el robot en espacio libre y velocidades bajas.
 4. **QoS**: si algún topic de Unitree no llega, revisar `ros2 topic info -v`.
 
-## Siguiente paso: EasyNav
+## Gazebo + EasyNav
+
+`go2w_gazebo` mete el Go2-W en un mundo de `src/worlds/` con física: patas fijas de pie, ruedas como skid steer en `/cmd_vel`, LiDAR de 16 canales (`/utlidar/cloud` → `/scan`), IMU, GPS (`/gps/fix`) y `/odom` perfecta. Los topics son los del robot real.
+
+```bash
+# terminal 1: simulación + RViz (Fixed Frame map, NavMap y ruta del planificador)
+ros2 launch go2w_gazebo go2w_gis.launch.py world_package:=gis_mic_recinto_world rviz:=true
+#   opcional: gui:=false (Gazebo sin ventana), x:= y:= yaw:= (posición inicial)
+
+# terminal 2: EasyNav
+ros2 run easynav_system system_main --ros-args --params-file config/easynav_gis_sim.params.yaml
+```
+
+Goals desde RViz con **NavMap Goal Pose** (tecla `g`): pone el goal sobre el terreno, con su altura. Los goals tienen que ir en frame `map`. Otro mundo: cambiar `package` y `navmap_path_file` en `config/easynav_gis_sim.params.yaml`.
 
 EasyNav 0.5.0 (EasyNavigation, easynav_plugins, NavMap, yaets) se clona en `src/external/` desde `deps.repos`; se compila con el resto del workspace.
