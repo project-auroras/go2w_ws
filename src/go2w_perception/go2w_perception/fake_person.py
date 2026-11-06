@@ -85,6 +85,11 @@ class FakePerson(Node):
         # persona 1 (a seguir) y persona 2 (distracción), [x0, y0, x1, y1, ...]
         path1 = p('path', [3.0, 0.0, 7.0, 0.0, 7.0, 4.0, 2.0, 4.0, 2.0, 1.0]).value
         path2 = p('distractor_path', [6.0, -3.0, 6.0, -1.5]).value
+        # como ByteTrack con la cámara real: nuevo ID al volver a entrar en la imagen
+        self.new_id_on_reappear = p('new_id_on_reappear', True).value
+        self.next_track_id = 100
+        self.track_ids = {}
+        self.was_visible = set()
         self.fx, self.cx, self.cy = 615.0, 320.0, 240.0  # intrínsecos aprox. RealSense 640x480
 
         self.walkers = [Walker('1', pairs(path1), speed, pause)]
@@ -134,10 +139,19 @@ class FakePerson(Node):
             sigma = self.noise * z
             x += random.gauss(0.0, sigma)
             z += random.gauss(0.0, sigma)
-            out.detections.append(self.make_detection(w.id, x, y, z))
+            out.detections.append(self.make_detection(self.track_id(w.id), x, y, z))
 
+        self.was_visible = visible
         self.pub.publish(out)
         self.publish_markers(visible)
+
+    def track_id(self, person_id):
+        if not self.new_id_on_reappear:
+            return person_id
+        if person_id not in self.was_visible or person_id not in self.track_ids:
+            self.track_ids[person_id] = str(self.next_track_id)
+            self.next_track_id += 1
+        return self.track_ids[person_id]
 
     def make_detection(self, person_id, x, y, z):
         d = Detection()

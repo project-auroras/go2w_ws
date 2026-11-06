@@ -30,6 +30,8 @@ rosbag (RealSense)
 | `go2w_perception/person_filter.py` | Republica solo la clase `person` (desde la versión 5.0, `yolo_ros` no filtra por clase) |
 | `go2w_perception/person_follower.py` | `/people` → `/cmd_vel`: sigue a una persona por su ID de tracking |
 | `go2w_perception/fake_person.py` | Personas virtuales que publican `/people` para simular sin cámara |
+| `launch/people_live.launch.py` | RealSense real (en la NX) → descompresión + YOLO + `person_filter` (+ `person_follower` con `follower:=true`) en el portátil |
+| `config/yolo_live.yaml` | `yolo_ros` con la cámara real, posiciones 3D en `base_link` |
 | `launch/person_follower_sim.launch.py` | `sim_go2w` + TF de la cámara + `fake_person` + `person_follower` + RViz |
 | `config/person_follower.yaml` | Parámetros de `person_follower` y `fake_person` |
 
@@ -148,8 +150,8 @@ fake_person ──► /people ──► person_follower ──► /cmd_vel ─�
      └──────────────── TF odom → camera_color_optical_frame (dónde está la cámara) ─────────┘
 ```
 
-- `fake_person`: dos personas recorren `path` y `distractor_path` en el frame `odom`. Solo publica en `/people` las que caen dentro del campo de visión de la RealSense (69° y de 0,3 a 6 m), con ruido y un 10 % de fallos de detección. Usa el mismo formato que `person_filter`, en `camera_color_optical_frame`.
-- `person_follower`: escoge la persona más cercana y se queda con su ID. Avanza hasta quedarse a `target_distance` y gira para tenerla centrada. Si no la ve durante `lost_timeout`, se para y suelta el ID. Nunca va marcha atrás.
+- `fake_person`: dos personas recorren `path` y `distractor_path` en el frame `odom`. Solo publica en `/people` las que caen dentro del campo de visión de la RealSense (69° y de 0,3 a 6 m), con ruido, un 10 % de fallos de detección y un ID nuevo cada vez que vuelven a entrar en la imagen (como ByteTrack). Usa el mismo formato que `person_filter`, en `camera_color_optical_frame`.
+- `person_follower`: escoge la persona más cercana (a menos de 3 m) y se queda con su ID. Avanza hasta quedarse a `target_distance` y gira para tenerla centrada. Si no la ve, se para a los 0,5 s, la recuerda 3 s y se reengancha si aparece cerca de donde estaba, aunque con otro ID. Nunca va marcha atrás.
 - La posición de la cámara sale del URDF (`base_link → camera_link`, medida en el robot); el launch solo añade `camera_link → camera_color_optical_frame`, que en el robot real publica el driver.
 - Los parámetros de los dos nodos están en `config/person_follower.yaml`.
 
@@ -177,6 +179,59 @@ ros2 topic echo /cmd_vel
 ```
 
 Probar `person_follower` con el rosbag real, sin robot: lanza `people_bag.launch.py` + `ros2 bag play ...` (pasos 4 y 5), luego `ros2 run go2w_perception person_follower` y mira `ros2 topic echo /cmd_vel`.
+
+## 9. Con la RealSense real (YOLO en el portátil)
+
+La cámara va por USB a la NX y YOLO corre en el portátil, con su GPU. La NX manda la imagen comprimida por WiFi (color en JPEG y profundidad en PNG sin pérdida); `people_live.launch.py` la descomprime, lanza YOLO y publica las personas en `/people`. Las posiciones salen en **`base_link`** (x delante, y izquierda), con la posición e inclinación de la cámara del URDF.
+
+Red: el portátil está en la red del robot por WiFi (`wlo1`, `192.168.123.103`) y la NX por cable (`enP8p1s0`, `192.168.123.18`).
+
+**NX** (cada terminal con `export GO2_IFACE=enP8p1s0 && source scripts/env.sh`):
+
+```bash
+ros2 launch go2w_bringup go2w.launch.py
+ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true \
+  rgb_camera.color_profile:=640x480x15 depth_module.depth_profile:=640x480x15
+```
+
+**Portátil**:
+
+```bash
+# host
+export GO2_IFACE=wlo1
+docker compose -f docker/compose.yaml run --rm --name go2w-cam go2w
+
+# contenedor
+scripts/install_deps.sh ws            # image_transport (compressed / compressedDepth) y rqt_image_view
+colcon build --symlink-install --packages-select go2w_perception
+source scripts/env.sh
+ros2 launch go2w_perception people_live.launch.py
+```
+
+Comprobar (otra terminal: `docker exec -it go2w-cam bash` y `source scripts/env.sh`):
+
+```bash
+ros2 topic hz /camera_local/color/image_raw            # imagen descomprimida (~15 Hz)
+ros2 topic hz /camera_local/aligned_depth/image_raw
+ros2 run rqt_image_view rqt_image_view /yolo/cam0/debug_image
+ros2 topic echo /people --field detections             # bbox3d.center.position en base_link
+```
+
+Sigue-personas (**el robot se mueve**: zona despejada y alguien con el mando):
+
+```bash
+ros2 launch go2w_perception people_live.launch.py follower:=true            # 0.3 m/s, 0.6 rad/s
+ros2 launch go2w_perception people_live.launch.py follower:=true max_linear:=0.2
+```
+
+- Antes de `follower:=true`, mira con `follower:=false` y `ros2 run go2w_perception person_follower` + `ros2 topic echo /cmd_vel` que las órdenes tienen sentido (persona a la derecha → `angular.z` negativo).
+- `go2w_driver` para el robot si no recibe `/cmd_vel` en 0,5 s: si el WiFi se corta, se para.
+- Todavía no hay parada por obstáculo: el robot no frena ante algo que no sea la persona.
+- Con la cámara real, ByteTrack cambia a menudo el ID de la persona (de cerca, o cuando llegan frames a saltos por el WiFi). Por eso `person_follower`:
+  - se **para** a los `stop_timeout` (0,5 s) sin verla, pero la **recuerda** durante `lost_timeout` (3 s);
+  - si mientras tanto aparece una detección a menos de `reacquire_radius` (1 m) de donde estaba, se **reengancha** a ella aunque tenga otro ID (`Persona X reenganchada como Y`);
+  - al empezar, solo elige personas a menos de `max_start_distance` (3 m).
+- `person_filter` descarta las detecciones con `score` < `min_score` (0,6) o una caja de menos de `min_height_px` (60 px) de alto: falsos positivos como trozos en el borde de la imagen.
 
 ## Problemas habituales
 

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Network interface connected to the robot (192.168.123.x), taken from $GO2_IFACE -->
+<!-- Reference only: scripts/env.sh builds this same config inline in CYCLONEDDS_URI with
+     the interface already expanded (network interface connected to the robot, 192.168.123.x). -->
 <CycloneDDS xmlns="https://cdds.io/config">
   <Domain Id="any">
     <General>

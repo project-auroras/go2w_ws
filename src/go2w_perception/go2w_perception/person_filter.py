@@ -11,6 +11,9 @@ class PersonFilter(Node):
         input_topic = self.declare_parameter('input_topic', '/yolo/cam0/detections_3d').value
         output_topic = self.declare_parameter('output_topic', '/people').value
         self.class_name = self.declare_parameter('class_name', 'person').value
+        # descarta falsos positivos: poca confianza o cajas diminutas (px de alto)
+        self.min_score = self.declare_parameter('min_score', 0.6).value
+        self.min_height = self.declare_parameter('min_height_px', 60.0).value
         self.pub = self.create_publisher(DetectionArray, output_topic, 10)
         self.create_subscription(DetectionArray, input_topic, self.on_detections, 10)
         self.get_logger().info(f'{input_topic} -> {output_topic} ({self.class_name})')
@@ -18,7 +21,10 @@ class PersonFilter(Node):
     def on_detections(self, msg):
         out = DetectionArray()
         out.header = msg.header
-        out.detections = [d for d in msg.detections if d.class_name == self.class_name]
+        out.detections = [
+            d for d in msg.detections
+            if d.class_name == self.class_name and d.score >= self.min_score
+            and d.bbox.size.y >= self.min_height]
         self.pub.publish(out)
 
 

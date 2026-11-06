@@ -32,6 +32,7 @@ setup(
             'person_filter = go2w_perception.person_filter:main',
             'person_follower = go2w_perception.person_follower:main',
             'fake_person = go2w_perception.fake_person:main',
+            'depth_decompress = go2w_perception.depth_decompress:main',
         ],
     },
 )

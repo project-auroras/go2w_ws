@@ -13,9 +13,14 @@ def clamp(value, limit):
 class PersonFollower(Node):
     """Sigue a una persona de /people publicando /cmd_vel.
 
-    Elige la persona más cercana y se queda con su ID de tracking hasta perderla.
-    Avanza para mantener target_distance y gira para tenerla centrada. Nunca va
-    marcha atrás. Si no la ve durante lost_timeout, se para y suelta el ID.
+    Elige la persona más cercana (a menos de max_start_distance) y se queda con su
+    ID de tracking. Avanza para mantener target_distance y gira para tenerla
+    centrada. Nunca va marcha atrás.
+
+    Si deja de verla: a los stop_timeout s se para, pero la sigue recordando hasta
+    lost_timeout. Si mientras tanto aparece una detección a menos de
+    reacquire_radius de donde estaba, se engancha a ella aunque el tracker le haya
+    dado otro ID (pasa a menudo con la cámara real). Pasado lost_timeout la olvida.
 
     Las posiciones pueden venir en un frame óptico de cámara (z delante, x derecha,
     nombre con 'optical') o en uno de robot como base_link (x delante, y izquierda).
@@ -35,7 +40,10 @@ class PersonFollower(Node):
         self.max_linear = p('max_linear', 0.5).value
         self.max_angular = p('max_angular', 0.8).value
         self.turn_in_place_angle = p('turn_in_place_angle', 0.6).value  # rad
-        self.lost_timeout = p('lost_timeout', 1.0).value
+        self.stop_timeout = p('stop_timeout', 0.5).value
+        self.lost_timeout = p('lost_timeout', 3.0).value
+        self.reacquire_radius = p('reacquire_radius', 1.0).value
+        self.max_start_distance = p('max_start_distance', 3.0).value
         rate = p('rate', 10.0).value
 
         self.cmd_pub = self.create_publisher(Twist, cmd_vel_topic, 10)
@@ -44,6 +52,7 @@ class PersonFollower(Node):
 
         self.current_id = None
         self.target = None          # (distance, bearing): bearing > 0 = a la izquierda
+        self.last_pos = None        # (delante, izquierda) de la última detección
         self.last_seen = None
         self.stopped = True
         self.get_logger().info(
@@ -66,38 +75,56 @@ class PersonFollower(Node):
             # sin profundidad válida, yolo_ros deja la posición a 0
             if forward <= 0.1 or not math.isfinite(distance) or distance > self.max_range:
                 continue
-            candidates[det.id] = (distance, math.atan2(left, forward))
+            candidates[det.id] = (distance, math.atan2(left, forward), (forward, left))
         if not candidates:
             return
 
         if self.target_id:
             chosen = self.target_id if self.target_id in candidates else None
         elif self.current_id is not None:
-            # no cambia de persona por un frame sin detección: espera a lost_timeout
             chosen = self.current_id if self.current_id in candidates else None
+            if chosen is None and self.last_pos is not None:
+                # el tracker le ha cambiado el ID: la que esté donde estaba
+                def gap(k):
+                    fx, fy = candidates[k][2]
+                    return math.hypot(fx - self.last_pos[0], fy - self.last_pos[1])
+                nearest = min(candidates, key=gap)
+                if gap(nearest) <= self.reacquire_radius:
+                    chosen = nearest
+                    self.get_logger().info(
+                        f'Persona {self.current_id} reenganchada como {chosen} '
+                        f'({gap(nearest):.2f} m de su última posición)')
         else:
-            chosen = min(candidates, key=lambda k: candidates[k][0])
+            near = {k: v for k, v in candidates.items() if v[0] <= self.max_start_distance}
+            chosen = min(near, key=lambda k: near[k][0]) if near else None
 
         if chosen is None:
             return
-        if chosen != self.current_id:
+        if self.current_id is None:
             self.get_logger().info(
                 f'Siguiendo a la persona {chosen} a {candidates[chosen][0]:.2f} m')
         self.current_id = chosen
-        self.target = candidates[chosen]
+        self.target = candidates[chosen][:2]
+        self.last_pos = candidates[chosen][2]
         self.last_seen = self.get_clock().now()
 
     def control(self):
-        if self.last_seen is None:
+        if self.last_seen is None or self.current_id is None:
             return
         elapsed = (self.get_clock().now() - self.last_seen).nanoseconds * 1e-9
         if elapsed > self.lost_timeout:
+            self.get_logger().warn(
+                f'Persona {self.current_id} perdida ({elapsed:.1f} s): la olvido')
+            self.current_id = None
+            self.last_pos = None
+            return
+        if elapsed > self.stop_timeout:
             if not self.stopped:
                 self.get_logger().warn(
-                    f'Persona {self.current_id} perdida ({elapsed:.1f} s): parado')
+                    f'Sin ver a la persona {self.current_id}: parado, esperando '
+                    f'{self.lost_timeout:.0f} s a que vuelva')
                 self.cmd_pub.publish(Twist())
                 self.stopped = True
-                self.current_id = None
             return
 
         distance, bearing = self.target

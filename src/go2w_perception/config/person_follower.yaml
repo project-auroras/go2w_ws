@@ -12,7 +12,11 @@ person_follower:
     max_linear: 0.5             # m/s
     max_angular: 0.8            # rad/s
     turn_in_place_angle: 0.6    # rad (~34 deg), con más desvío gira sin avanzar
-    lost_timeout: 1.0           # s sin verla -> se para y suelta el ID
+    stop_timeout: 0.5           # s sin verla -> se para (pero la recuerda)
+    lost_timeout: 3.0           # s sin verla -> la olvida y elige otra persona
+    reacquire_radius: 1.0       # m: si el tracker le cambia el ID, se engancha a la
+                                # detección que aparezca a menos de esto de donde estaba
+    max_start_distance: 3.0     # m: al empezar solo elige personas a menos de esto
     rate: 10.0
 
 # fake_person: personas virtuales para probar sin cámara (person_follower_sim.launch.py)
@@ -30,6 +34,7 @@ fake_person:
     person_height: 1.7
     speed: 0.4                  # m/s de la persona 1
     pause: 2.0                  # s parada en cada punto
+    new_id_on_reappear: true    # nuevo ID al volver a entrar en la imagen (como ByteTrack)
     # recorrido en bucle de la persona 1, x0 y0 x1 y1 ... (el robot empieza en 0 0 mirando a +x)
     path: [3.0, 0.0, 7.0, 0.0, 7.0, 4.0, 2.0, 4.0, 2.0, 1.0]
     # persona 2 (distracción): [] para quitarla
