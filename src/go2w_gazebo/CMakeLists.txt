@@ -3,7 +3,7 @@ project(go2w_gazebo)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY launch config urdf
+install(DIRECTORY launch config urdf rviz
   DESTINATION share/${PROJECT_NAME}
 )
 
