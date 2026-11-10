@@ -10,6 +10,12 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
+# Posición inicial del robot en cada mundo (x, y, yaw) si no se pasa x:= y:= yaw:=
+START_POSES = {
+    'objetos': (0.0, 0.0, 0.0),
+    'campo': (-1.5, 0.75, 0.0),   # en la cabecera, al principio del pasillo y=0.75
+}
+
 WHEEL_RADIUS = 0.086
 WHEEL_WIDTH = 0.04
 
@@ -42,6 +48,14 @@ def robot_description():
 def launch_setup(context):
     gui = LaunchConfiguration('gui').perform(context) == 'true'
     world = LaunchConfiguration('world').perform(context)
+    name = os.path.splitext(os.path.basename(world))[0]
+    if '/' not in world and not world.endswith('.sdf'):
+        # un nombre ("campo") -> worlds/campo.sdf de este paquete
+        world = os.path.join(get_package_share_directory('go2w_gazebo'), 'worlds',
+                             world + '.sdf')
+    start = START_POSES.get(name, (0.0, 0.0, 0.0))
+    x, y, yaw = (LaunchConfiguration(k).perform(context) or str(v)
+                 for k, v in zip(('x', 'y', 'yaw'), start))
     gz_args = f'-r {world}' if gui else f'-r -s --headless-rendering {world}'
 
     return [
@@ -63,8 +77,8 @@ def launch_setup(context):
             package='ros_gz_sim',
             executable='create',
             arguments=['-topic', 'robot_description', '-name', 'go2w',
-                       '-x', LaunchConfiguration('x'), '-y', LaunchConfiguration('y'),
-                       '-z', LaunchConfiguration('z'), '-Y', LaunchConfiguration('yaw')],
+                       '-x', x, '-y', y,
+                       '-z', LaunchConfiguration('z'), '-Y', yaw],
             output='screen',
         ),
 
@@ -89,15 +103,15 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            'world', default_value=PathJoinSubstitution(
-                [FindPackageShare('go2w_gazebo'), 'worlds', 'objetos.sdf']),
-            description='Ruta al .sdf del mundo'),
+            'world', default_value='objetos',
+            description='Mundo: un nombre de worlds/ (objetos, campo) o la ruta a un .sdf'),
         DeclareLaunchArgument('gui', default_value='true',
                               description='false: Gazebo sin ventana'),
-        DeclareLaunchArgument('x', default_value='0.0'),
-        DeclareLaunchArgument('y', default_value='0.0'),
+        # x, y, yaw vacíos -> la posición de START_POSES para ese mundo
+        DeclareLaunchArgument('x', default_value=''),
+        DeclareLaunchArgument('y', default_value=''),
         DeclareLaunchArgument('z', default_value='0.45'),
-        DeclareLaunchArgument('yaw', default_value='0.0'),
+        DeclareLaunchArgument('yaw', default_value=''),
 
         # Para que Gazebo encuentre las mallas package://go2w_description/...
         AppendEnvironmentVariable('IGN_GAZEBO_RESOURCE_PATH',

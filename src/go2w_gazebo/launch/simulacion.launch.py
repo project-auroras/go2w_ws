@@ -24,15 +24,18 @@ def generate_launch_description():
         DeclareLaunchArgument('rviz', default_value='true'),
         DeclareLaunchArgument('gui', default_value='true',
                               description='false: Gazebo sin ventana'),
-        DeclareLaunchArgument('x', default_value='0.0'),
-        DeclareLaunchArgument('y', default_value='0.0'),
-        DeclareLaunchArgument('yaw', default_value='0.0'),
+        DeclareLaunchArgument('world', default_value='objetos',
+                              description='objetos, campo o la ruta a un .sdf'),
+        DeclareLaunchArgument('x', default_value='', description='vacío: según el mundo'),
+        DeclareLaunchArgument('y', default_value=''),
+        DeclareLaunchArgument('yaw', default_value=''),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(PathJoinSubstitution(
                 [gazebo, 'launch', 'escena.launch.py'])),
             launch_arguments={
                 'gui': LaunchConfiguration('gui'),
+                'world': LaunchConfiguration('world'),
                 'x': LaunchConfiguration('x'),
                 'y': LaunchConfiguration('y'),
                 'yaw': LaunchConfiguration('yaw'),

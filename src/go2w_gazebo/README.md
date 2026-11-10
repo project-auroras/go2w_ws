@@ -87,12 +87,39 @@ ros2 launch go2w_gazebo simulacion.launch.py follower:=true y:=7.0
 - El robot va detrás de ella y se queda a unos 1,5 m. Los parámetros están en `go2w_perception/config/person_follower.yaml`.
 - En la terminal salen mensajes como `Siguiendo a la persona N` y `id N: d=... -> vx=..., wz=...`.
 
+### Campo de cultivo (`world:=campo`)
+
+Mundo vacío con un campo: 6 surcos de 18 m (lechugas, maíz y tomates), malas hierbas, árboles alrededor y una persona que camina por los pasillos entre surcos.
+
+```bash
+ros2 launch go2w_gazebo simulacion.launch.py world:=campo follower:=true
+```
+
+```
+y=4.5  ===== tomates ==========================
+y=3.75   <---------- persona (vuelta) ----------
+y=3.0  ===== tomates ==========================
+y=1.5  ===== maíz =============================
+y=0.75 R  ---------- persona (ida) ------------>
+y=0.0  ===== maíz =============================
+y=-1.5 ===== lechugas =========================
+y=-3.0 ===== lechugas =========================
+       x=2                                  x=20
+```
+
+- El robot (R) sale en (-1.5, 0.75), en la cabecera, y la persona empieza 2,5 m delante.
+- La persona va por el pasillo y=0.75 a 0,5 m/s, gira en la cabecera de x=23, vuelve por el pasillo y=3.75 y repite (vuelta de 104 s).
+- Los surcos miden 50 cm de ancho y 12 cm de alto y tienen colisión: si el robot se sale del pasillo, choca con ellos. Los pasillos miden 1 m. Las plantas no tienen colisión.
+- El maíz (1,3–1,8 m) tapa a la persona cuando está en otro pasillo.
+- Lo genera `scripts/generar_campo.py` (es un archivo grande y repetitivo, no se edita a mano). Para cambiar los cultivos, los surcos, los árboles o el recorrido de la persona, cambia las constantes del principio del script y ejecútalo: `python3 src/go2w_gazebo/scripts/generar_campo.py`.
+
 ### Argumentos
 
 | Argumento | Por defecto | Qué hace |
 |---|---|---|
 | `follower` | `false` | `true`: lanza `person_follower` |
-| `x`, `y`, `yaw` | `0.0` | Posición inicial del robot (m, rad) |
+| `world` | `objetos` | Mundo: `objetos`, `campo` o la ruta a un `.sdf` |
+| `x`, `y`, `yaw` | según el mundo | Posición inicial del robot (m, rad). `objetos`: (0, 0); `campo`: (-1.5, 0.75) |
 | `rviz` | `true` | Abre RViz |
 | `gui` | `true` | `false`: Gazebo sin ventana |
 
@@ -126,6 +153,8 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 | Archivo | Contenido |
 |---|---|
 | `worlds/objetos.sdf` | La escena: suelo, luz, objetos y la persona que camina |
+| `worlds/campo.sdf` | Campo de cultivo con surcos, plantas, árboles y la persona (generado) |
+| `scripts/generar_campo.py` | Genera `worlds/campo.sdf` |
 | `urdf/go2w_gazebo.urdf.xacro` | El Go2-W para Gazebo: patas sujetas, ruedas y RealSense |
 | `config/bridge.yaml` | Puente Gazebo ↔ ROS (`/clock`, `/cmd_vel`, `/odom`, `/tf`, `/joint_states`, cámara) con los mismos topics que la RealSense real |
 | `config/yolo_gazebo.yaml` | `yolo_ros` con la cámara simulada, tiempo simulado y posiciones 3D en `base_link` |
