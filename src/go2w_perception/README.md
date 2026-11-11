@@ -151,7 +151,9 @@ fake_person ──► /people ──► person_follower ──► /cmd_vel ─�
 ```
 
 - `fake_person`: dos personas recorren `path` y `distractor_path` en el frame `odom`. Solo publica en `/people` las que caen dentro del campo de visión de la RealSense (69° y de 0,3 a 6 m), con ruido, un 10 % de fallos de detección y un ID nuevo cada vez que vuelven a entrar en la imagen (como ByteTrack). Usa el mismo formato que `person_filter`, en `camera_color_optical_frame`.
-- `person_follower`: escoge la persona más cercana (a menos de 3 m) y se queda con su ID. Avanza hasta quedarse a `target_distance` y gira para tenerla centrada. Si no la ve, se para a los 0,5 s, la recuerda 3 s y se reengancha si aparece cerca de donde estaba, aunque con otro ID. Nunca va marcha atrás.
+- `person_follower`: escoge la persona más cercana (a menos de 3 m) y se queda con su ID. Gira para tenerla centrada y avanza para mantener la distancia. Si la persona se le acerca a menos de `backoff_distance`, retrocede despacio. Si no la ve, sigue hacia donde predice que está; a los 0,5 s frena, la recuerda 3 s y se reengancha si aparece cerca de donde debería estar, aunque con otro ID.
+- **Velocidad de la persona**: `person_follower` pasa cada detección al frame `odom` (con `/odom`) y estima la velocidad de la persona respecto al suelo con un filtro alfa-beta (`track_alpha`, `track_beta`). La usa como base de la orden: `vx = v_persona + k_linear · (distancia − objetivo)`. Así acelera a la vez que ella, en lugar de esperar a que se aleje. La distancia objetivo crece con la velocidad (`target_distance + time_gap · v`) para tener margen de frenada, y los cambios de velocidad van con rampa (`max_accel`, `max_decel`, `max_angular_accel`). Si la persona está andando (`moving_speed`), no se para a girar aunque esté ladeada.
+- Para probar varios ritmos: `speed` de `fake_person` (m/s constantes) o `speed_profile` (m/s de cada tramo de `path`, p. ej. `[0.5, 1.4, 0.5, 1.0]` para una persona que acelera de golpe). En simulación sigue sin perderla de 0,4 a 1,5 m/s, a unos 2–2,5 m.
 - La posición de la cámara sale del URDF (`base_link → camera_link`, medida en el robot); el launch solo añade `camera_link → camera_color_optical_frame`, que en el robot real publica el driver.
 - Los parámetros de los dos nodos están en `config/person_follower.yaml`.
 
@@ -226,6 +228,7 @@ ros2 launch go2w_perception people_live.launch.py follower:=true max_linear:=0.2
 
 - Antes de `follower:=true`, mira con `follower:=false` y `ros2 run go2w_perception person_follower` + `ros2 topic echo /cmd_vel` que las órdenes tienen sentido (persona a la derecha → `angular.z` negativo).
 - `go2w_driver` para el robot si no recibe `/cmd_vel` en 0,5 s: si el WiFi se corta, se para.
+- Para seguir a alguien andando a paso normal (1,2–1,4 m/s) hace falta `max_linear` de ~1,6 (el de `person_follower.yaml`; `go2w_driver` también recorta a `max_vx`, 1,6). Por seguridad, `people_live.launch.py` lo deja en 0,6 por defecto: súbelo poco a poco (`max_linear:=1.0`, luego `1.6`) en una zona amplia.
 - **No frena ante obstáculos**: solo sigue a la persona. Zona despejada y alguien con el mando.
 - Si la persona se acerca a menos de `backoff_distance` (1,3 m del centro, ~1 m del morro), retrocede a `max_backward` (0,3 m/s) sin dejar de mirarla. Detrás no hay cámara: hace falta espacio libre detrás del robot.
 - Con la cámara real, ByteTrack cambia a menudo el ID de la persona (de cerca, o cuando llegan frames a saltos por el WiFi). Por eso `person_follower`:

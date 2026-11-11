@@ -29,10 +29,12 @@ def rotate(q, v):
 class Walker:
     """Persona que recorre en bucle una lista de puntos (x, y) en el frame del mundo."""
 
-    def __init__(self, person_id, waypoints, speed, pause):
+    def __init__(self, person_id, waypoints, speed, pause, speed_profile=()):
         self.id = person_id
         self.waypoints = waypoints
         self.speed = speed
+        # velocidad de cada tramo (el i va del punto i al i+1); vacío = siempre speed
+        self.speed_profile = list(speed_profile)
         self.pause = pause
         self.x, self.y = waypoints[0]
         self.next = 1 % len(waypoints)
@@ -45,7 +47,10 @@ class Walker:
         gx, gy = self.waypoints[self.next]
         dx, dy = gx - self.x, gy - self.y
         dist = math.hypot(dx, dy)
-        advance = self.speed * dt
+        speed = self.speed
+        if self.speed_profile:
+            speed = self.speed_profile[(self.next - 1) % len(self.speed_profile)]
+        advance = speed * dt
         if dist <= advance:
             self.x, self.y = gx, gy
             self.next = (self.next + 1) % len(self.waypoints)
@@ -85,6 +90,9 @@ class FakePerson(Node):
         # persona 1 (a seguir) y persona 2 (distracción), [x0, y0, x1, y1, ...]
         path1 = p('path', [3.0, 0.0, 7.0, 0.0, 7.0, 4.0, 2.0, 4.0, 2.0, 1.0]).value
         path2 = p('distractor_path', [6.0, -3.0, 6.0, -1.5]).value
+        # m/s de cada tramo de la persona 1 (para probar cambios de ritmo); [] = speed
+        profile = p('speed_profile', [0.0]).value
+        profile = [v for v in profile if v > 0.0]
         # como ByteTrack con la cámara real: nuevo ID al volver a entrar en la imagen
         self.new_id_on_reappear = p('new_id_on_reappear', True).value
         self.next_track_id = 100
@@ -92,7 +100,7 @@ class FakePerson(Node):
         self.was_visible = set()
         self.fx, self.cx, self.cy = 615.0, 320.0, 240.0  # intrínsecos aprox. RealSense 640x480
 
-        self.walkers = [Walker('1', pairs(path1), speed, pause)]
+        self.walkers = [Walker('1', pairs(path1), speed, pause, profile)]
         if len(path2) >= 2:
             self.walkers.append(Walker('2', pairs(path2), 0.3, pause))
 

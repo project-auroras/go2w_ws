@@ -96,7 +96,7 @@
       <wheel_radius>0.086</wheel_radius>
       <max_linear_acceleration>1.0</max_linear_acceleration>
       <max_angular_acceleration>2.0</max_angular_acceleration>
-      <max_linear_velocity>1.0</max_linear_velocity>
+      <max_linear_velocity>1.6</max_linear_velocity>   <!-- = max_vx de go2w_driver -->
       <max_angular_velocity>1.5</max_angular_velocity>
       <topic>/model/go2w/cmd_vel</topic>
       <odom_topic>/model/go2w/odometry</odom_topic>
