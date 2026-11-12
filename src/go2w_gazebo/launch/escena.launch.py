@@ -113,13 +113,10 @@ def generate_launch_description():
         DeclareLaunchArgument('z', default_value='0.45'),
         DeclareLaunchArgument('yaw', default_value=''),
 
-        # Para que Gazebo encuentre las mallas package://go2w_description/...
-        AppendEnvironmentVariable('IGN_GAZEBO_RESOURCE_PATH',
-                                  os.path.dirname(description_share)),
-        # texturas del campo (model://campo_texturas/...), Harmonic y Fortress
+        # Para que Gazebo (Harmonic) encuentre las mallas package://go2w_description/... y
+        # las texturas del campo (model://campo_texturas/...)
+        AppendEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.path.dirname(description_share)),
         AppendEnvironmentVariable('GZ_SIM_RESOURCE_PATH', os.path.join(
-            get_package_share_directory('go2w_gazebo'), 'models')),
-        AppendEnvironmentVariable('IGN_GAZEBO_RESOURCE_PATH', os.path.join(
             get_package_share_directory('go2w_gazebo'), 'models')),
 
         OpaqueFunction(function=launch_setup),

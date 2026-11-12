@@ -63,6 +63,13 @@ RUN curl -fsSL -o /tmp/cuda-keyring.deb \
 ENV CUDA_VERSION=13.0
 ENV LD_LIBRARY_PATH=/usr/local/cuda/lib64
 
+# EGL of the NVIDIA driver (mounted by nvidia-container-toolkit) for Gazebo's sensor
+# rendering: without this vendor file glvnd only knows Mesa, which can't use the NVIDIA GPU
+# ("OpenGL 3.3 is not supported" / "Failed to create dummy render window")
+RUN mkdir -p /usr/share/glvnd/egl_vendor.d \
+    && printf '{"file_format_version": "1.0.0", "ICD": {"library_path": "libEGL_nvidia.so.0"}}\n' \
+        > /usr/share/glvnd/egl_vendor.d/10_nvidia.json
+
 RUN groupadd --gid ${USER_GID} ${USERNAME} \
     && useradd --uid ${USER_UID} --gid ${USER_GID} -m -s /bin/bash ${USERNAME} \
     && echo "${USERNAME} ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} \

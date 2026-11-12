@@ -22,5 +22,10 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     devices:
       - /dev/dri:/dev/dri
+    # access to /dev/dri: video (card*, 44 on Ubuntu) and render (renderD*, its GID changes
+    # between hosts: `getent group render`, 992 on this PC)
+    group_add:
+      - video
+      - "${RENDER_GID:-992}"
     stdin_open: true
     tty: true

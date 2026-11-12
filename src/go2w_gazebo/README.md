@@ -272,10 +272,10 @@ ros2 run navmap_tools pointcloud_to_navmap --input src/go2w_gazebo/maps/campo_fl
 
 | Síntoma | Solución |
 |---|---|
-| Gazebo tarda mucho la primera vez o la ventana sale vacía | Está descargando los modelos de Fuel; espera. Se guardan en `~/.ignition/fuel` (dentro del contenedor, así que se pierden con `--rm`) |
+| Gazebo tarda mucho la primera vez o la ventana sale vacía | Está descargando los modelos de Fuel; espera. Se guardan en `~/.gz/fuel` (dentro del contenedor, así que se pierden con `--rm`) |
 | `package 'ros_gz_sim' not found` | Ejecuta `scripts/install_deps.sh ws` en este contenedor |
 | La simulación va más lenta que el tiempo real | Es normal (0,5–0,8), porque renderiza la cámara y ejecuta YOLO a la vez |
 | La caja roja sale como "car" | Falso positivo de YOLO, no es un fallo de la simulación |
 | No detecta la silla, la mesa o el stop desde (0, 0) | La silla y la mesa quedan fuera del campo de visión y el stop está de canto. Mueve el robot (`x:=`, `y:=`, `yaw:=` o teleop) |
-| Aparecen robots u objetos de más, o topics de Gazebo raros | Hay otro Gazebo en el host (con `network_mode: host` se mezclan). Ciérralo, o usa otra partición en todas las terminales: `export IGN_PARTITION=otra` |
+| Aparecen robots u objetos de más, o topics de Gazebo raros | Hay otro Gazebo en el host (con `network_mode: host` se mezclan). Ciérralo, o usa otra partición en todas las terminales: `export GZ_PARTITION=otra` |
 | No abre la ventana | En el host: `xhost +local:docker` |
