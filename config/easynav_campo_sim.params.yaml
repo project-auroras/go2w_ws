@@ -1,0 +1,135 @@
+# EasyNav for the Go2-W in Gazebo on the crop field (go2w_gis.launch.py world:=campo, or
+# semantica.launch.py). Same as easynav_gis_sim.params.yaml but with the flat NavMap of the
+# field (go2w_gazebo maps/campo_flat.navmap, ground z = 0) and lower obstacles: the ridges
+# are 12 cm high and the robot must not drive over them.
+#   ros2 run easynav_system system_main --ros-args --params-file config/easynav_campo_sim.params.yaml
+# Goals: /goal_pose in frame map (RViz, semantic_goal, row_follower). map = Gazebo world.
+controller_node:
+  ros__parameters:
+    use_sim_time: true
+    # regulated_pp follows the path in smooth arcs; simple (PID to a point 0.6 m ahead) went
+    # stop-turn-go: it drops linear speed to 0 while it turns (vlin - k_rot * |vrot|)
+    controller_types: [regulated_pp]
+    regulated_pp:
+      rt_freq: 30.0
+      plugin: easynav_regulated_pp_controller/RegulatedPurePursuitController
+      # carrot ahead of the robot: 0.5 m at rest, up to 1.5 m at speed (A* path is through
+      # the NavMap triangles, ~0.7 m: a long lookahead smooths its zigzag)
+      use_velocity_scaled_lookahead_dist: true
+      lookahead_time: 1.5
+      min_lookahead_dist: 0.6
+      max_lookahead_dist: 1.5
+      # rotate in place only when the path turns sharply (> 45 deg), and at the final goal
+      use_rotate_to_heading: true
+      rotate_to_heading_min_angle: 0.785
+      rotate_to_heading_angular_vel: 0.8
+      use_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 0.9
+      regulated_linear_scaling_min_speed: 0.15
+      approach_velocity_scaling_dist: 0.8
+      min_approach_linear_velocity: 0.1
+      allow_reversing: false
+      # obstacles are already in the NavMap (A* + inflation): no extra slow-down here
+      use_obstacle_regulated_linear_velocity_scaling: false
+    simple:
+      rt_freq: 30.0
+      plugin: easynav_simple_controller/SimpleController
+      look_ahead_dist: 0.6
+      tolerance_dist: 0.1
+      final_goal_angle_tolerance: 0.15
+    # Same limits as go2w_driver (max_vx 1.0, max_wz 1.5), lower for the first tests
+    robot_limits:
+      max_linear_vel: 0.5
+      min_linear_vel: 0.0
+      max_angular_vel: 1.0
+      max_linear_acc: 1.0
+      max_linear_decel: 1.0
+      max_angular_acc: 2.0
+
+# /odom of the sim is ground truth: map -> odom only aligns the frames (identity here).
+# On the real robot this would fuse FAST-LIO /odom (+ /gps/fix).
+localizer_node:
+  ros__parameters:
+    use_sim_time: true
+    localizer_types: [fusion]
+    fusion:
+      rt_freq: 50.0
+      freq: 5.0
+      reseed_freq: 0.1
+      plugin: easynav_fusion_localizer/FusionLocalizer
+      global_filter:
+        two_d_mode: false
+        publish_tf: true
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_footprint
+        world_frame: map
+        odom0: /odom
+        odom0_config:
+          [true,  true,  true,
+           true,  true,  true,
+           true,  false, false,
+           false, false, true,
+           false, false, false]
+        odom0_differential: false
+
+maps_manager_node:
+  ros__parameters:
+    use_sim_time: true
+    map_types: [navmap]
+    navmap:
+      freq: 10.0
+      plugin: easynav_navmap_maps_manager/NavMapMapsManager
+      package: go2w_gazebo
+      navmap_path_file: maps/campo_flat.navmap
+      filters: [obstacles, inflation]
+      obstacles:
+        plugin: easynav_navmap_maps_manager/NavMapMapsManager/ObstaclesFilter
+        max_range: 10.0
+        # Flat ground: ridges + plants (>= 0.2 m) are obstacles, weeds (< 0.13 m) are not.
+        # The lidar only sees the ridges from ~2 m (lowest beam -15 deg from 0.56 m)
+        min_height: 0.15
+        max_height: 1.0
+      inflation:
+        plugin: easynav_navmap_maps_manager/NavMapMapsManager/InflationFilter
+        # aisles are 1 m between ridge edges, maize leaves reach ~0.35 m into them: 0.6 m
+        # (gis config) closes the aisle
+        inflation_radius: 0.35
+
+planner_node:
+  ros__parameters:
+    use_sim_time: true
+    planner_types: [astar]
+    astar:
+      freq: 1.0
+      plugin: easynav_navmap_planner/AStarPlanner
+      continuous_replan: true
+
+sensors_node:
+  ros__parameters:
+    use_sim_time: true
+    forget_time: 0.5
+    sensors: [lidar]
+    perception_default_frame: odom
+    lidar:
+      topic: /utlidar/cloud
+      type: sensor_msgs/msg/PointCloud2
+      plugin: easynav_sensors/PointPerceptionHandler
+
+system_node:
+  ros__parameters:
+    use_sim_time: true
+    robot_frame: base_link
+    robot_footprint_frame: base_footprint
+    odom_frame: odom
+    map_frame: map
+    position_tolerance: 0.3
+    # Every goal (also intermediate waypoints) must match yaw too
+    angle_tolerance: 0.3
+    # base_footprint is at body height in the sim (~0.44 m over the terrain): goal z is ground
+    height_tolerance: 1.0
+    # Go2-W footprint ~0.7 x 0.45 m
+    # (0.4 in the gis config) 0.3 so the robot fits in a 1 m aisle
+    robot_geometry:
+      radius: 0.3
+      height: 0.6

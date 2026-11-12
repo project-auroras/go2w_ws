@@ -2,8 +2,9 @@
 <!-- GENERADO por scripts/generar_campo.py: no editar a mano, cambia el script.
      Campo de cultivo: surcos de lechuga, maíz y tomate, malas hierbas, árboles
      alrededor y una persona que camina por los pasillos.
-     El robot debe empezar en (-1.5, 0.75) mirando a +x (lo hace simulacion.launch.py
-     con world:=campo). -->
+     Objetos para la navegación semántica: postes, frutales, charcos, baches y rodadas.
+     El robot debe empezar en (-1.5, 0.75) mirando a +x (lo hacen simulacion.launch.py
+     y go2w_gis.launch.py con world:=campo). -->
 <sdf version="1.8">
   <world name="campo">
 
@@ -11,12 +12,25 @@
       <max_step_size>0.001</max_step_size>
       <real_time_factor>1.0</real_time_factor>
     </physics>
-    <plugin filename="ignition-gazebo-physics-system" name="ignition::gazebo::systems::Physics"/>
-    <plugin filename="ignition-gazebo-user-commands-system" name="ignition::gazebo::systems::UserCommands"/>
-    <plugin filename="ignition-gazebo-scene-broadcaster-system" name="ignition::gazebo::systems::SceneBroadcaster"/>
-    <plugin filename="ignition-gazebo-sensors-system" name="ignition::gazebo::systems::Sensors">
+    <!-- Gazebo Harmonic. Imu y NavSat: los sensores del robot de go2w_gis.launch.py -->
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics"/>
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
+    <plugin filename="gz-sim-navsat-system" name="gz::sim::systems::NavSat"/>
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
       <render_engine>ogre2</render_engine>
     </plugin>
+
+    <!-- origen del mundo: junto al MIC (León), para que /gps/fix tenga sentido -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>42.61528</latitude_deg>
+      <longitude_deg>-5.56333</longitude_deg>
+      <elevation>830</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
 
     <scene>
       <ambient>0.6 0.6 0.6 1</ambient>
@@ -44,11 +58,30 @@
           <geometry><plane><normal>0 0 1</normal><size>200 200</size></plane></geometry>
           <material><ambient>0.30 0.45 0.20 1</ambient><diffuse>0.30 0.45 0.20 1</diffuse></material>
         </visual>
-        <visual name="tierra">
-          <pose>11 0.75 0.003 0 0 0</pose>
-          <geometry><plane><normal>0 0 1</normal><size>32 12</size></plane></geometry>
-          <material><ambient>0.40 0.27 0.16 1</ambient><diffuse>0.40 0.27 0.16 1</diffuse></material>
-        </visual>
+        <visual name="tierra_0_0"><pose>-3.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_0_1"><pose>-3.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_0_2"><pose>-3.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1_0"><pose>1.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1_1"><pose>1.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1_2"><pose>1.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2_0"><pose>5.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2_1"><pose>5.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2_2"><pose>5.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3_0"><pose>9.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3_1"><pose>9.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3_2"><pose>9.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4_0"><pose>13.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4_1"><pose>13.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4_2"><pose>13.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5_0"><pose>17.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5_1"><pose>17.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5_2"><pose>17.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6_0"><pose>21.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6_1"><pose>21.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6_2"><pose>21.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7_0"><pose>25.000 -3.250 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7_1"><pose>25.000 0.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7_2"><pose>25.000 4.750 0.003 0.000 0.000 0.000</pose><geometry><box><size>4.000 4.000 0.001</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/tierra.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
       </link>
     </model>
 
@@ -59,8 +92,15 @@
       <link name="link">
         <collision name="collision"><pose>0 0 0.060 0 0 0</pose>
           <geometry><box><size>18.000 0.500 0.120</size></box></geometry></collision>
-        <visual name="tierra"><pose>0 0 0.060 0 0 0</pose>
-          <geometry><box><size>18.000 0.500 0.120</size></box></geometry><material><ambient>0.35 0.23 0.13 1</ambient><diffuse>0.35 0.23 0.13 1</diffuse></material></visual>
+        <visual name="tierra_0"><pose>-8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1"><pose>-6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2"><pose>-4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3"><pose>-2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4"><pose>0.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5"><pose>2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6"><pose>4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7"><pose>6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_8"><pose>8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
         <visual name="l0_centro"><pose>-8.853 0.015 0.170 0.000 0.000 0.000</pose><geometry><sphere><radius>0.066</radius></sphere></geometry><material><ambient>0.45 0.70 0.25 1</ambient><diffuse>0.45 0.70 0.25 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="l0_hoja0"><pose>-8.795 0.016 0.153 0.000 0.000 0.000</pose><geometry><sphere><radius>0.058</radius></sphere></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="l0_hoja1"><pose>-8.848 0.073 0.153 0.000 0.000 0.000</pose><geometry><sphere><radius>0.058</radius></sphere></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
@@ -294,8 +334,15 @@
       <link name="link">
         <collision name="collision"><pose>0 0 0.060 0 0 0</pose>
           <geometry><box><size>18.000 0.500 0.120</size></box></geometry></collision>
-        <visual name="tierra"><pose>0 0 0.060 0 0 0</pose>
-          <geometry><box><size>18.000 0.500 0.120</size></box></geometry><material><ambient>0.35 0.23 0.13 1</ambient><diffuse>0.35 0.23 0.13 1</diffuse></material></visual>
+        <visual name="tierra_0"><pose>-8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1"><pose>-6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2"><pose>-4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3"><pose>-2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4"><pose>0.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5"><pose>2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6"><pose>4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7"><pose>6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_8"><pose>8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
         <visual name="l1_centro"><pose>-8.490 -0.019 0.186 0.000 0.000 0.000</pose><geometry><sphere><radius>0.088</radius></sphere></geometry><material><ambient>0.45 0.70 0.25 1</ambient><diffuse>0.45 0.70 0.25 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="l1_hoja0"><pose>-8.413 -0.029 0.164 0.000 0.000 0.000</pose><geometry><sphere><radius>0.077</radius></sphere></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="l1_hoja1"><pose>-8.490 0.058 0.164 0.000 0.000 0.000</pose><geometry><sphere><radius>0.077</radius></sphere></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
@@ -539,8 +586,15 @@
       <link name="link">
         <collision name="collision"><pose>0 0 0.060 0 0 0</pose>
           <geometry><box><size>18.000 0.500 0.120</size></box></geometry></collision>
-        <visual name="tierra"><pose>0 0 0.060 0 0 0</pose>
-          <geometry><box><size>18.000 0.500 0.120</size></box></geometry><material><ambient>0.35 0.23 0.13 1</ambient><diffuse>0.35 0.23 0.13 1</diffuse></material></visual>
+        <visual name="tierra_0"><pose>-8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1"><pose>-6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2"><pose>-4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3"><pose>-2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4"><pose>0.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5"><pose>2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6"><pose>4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7"><pose>6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_8"><pose>8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
         <visual name="m0_tallo"><pose>-8.862 0.046 0.801 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.015</radius><length>1.362</length></cylinder></geometry><material><ambient>0.35 0.50 0.20 1</ambient><diffuse>0.35 0.50 0.20 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="m0_hoja0"><pose>-8.686 0.005 0.529 0.000 0.500 6.059</pose><geometry><box><size>0.450 0.060 0.004</size></box></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="m0_hoja1"><pose>-8.820 0.200 0.760 0.000 0.500 1.303</pose><geometry><box><size>0.400 0.060 0.004</size></box></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
@@ -885,8 +939,15 @@
       <link name="link">
         <collision name="collision"><pose>0 0 0.060 0 0 0</pose>
           <geometry><box><size>18.000 0.500 0.120</size></box></geometry></collision>
-        <visual name="tierra"><pose>0 0 0.060 0 0 0</pose>
-          <geometry><box><size>18.000 0.500 0.120</size></box></geometry><material><ambient>0.35 0.23 0.13 1</ambient><diffuse>0.35 0.23 0.13 1</diffuse></material></visual>
+        <visual name="tierra_0"><pose>-8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1"><pose>-6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2"><pose>-4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3"><pose>-2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4"><pose>0.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5"><pose>2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6"><pose>4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7"><pose>6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_8"><pose>8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
         <visual name="m0_tallo"><pose>-8.821 0.041 1.006 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.015</radius><length>1.772</length></cylinder></geometry><material><ambient>0.35 0.50 0.20 1</ambient><diffuse>0.35 0.50 0.20 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="m0_hoja0"><pose>-8.680 0.154 0.652 0.000 0.500 0.673</pose><geometry><box><size>0.450 0.060 0.004</size></box></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="m0_hoja1"><pose>-8.777 0.195 0.953 0.000 0.500 1.293</pose><geometry><box><size>0.400 0.060 0.004</size></box></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
@@ -1213,8 +1274,15 @@
       <link name="link">
         <collision name="collision"><pose>0 0 0.060 0 0 0</pose>
           <geometry><box><size>18.000 0.500 0.120</size></box></geometry></collision>
-        <visual name="tierra"><pose>0 0 0.060 0 0 0</pose>
-          <geometry><box><size>18.000 0.500 0.120</size></box></geometry><material><ambient>0.35 0.23 0.13 1</ambient><diffuse>0.35 0.23 0.13 1</diffuse></material></visual>
+        <visual name="tierra_0"><pose>-8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1"><pose>-6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2"><pose>-4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3"><pose>-2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4"><pose>0.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5"><pose>2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6"><pose>4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7"><pose>6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_8"><pose>8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
         <visual name="t0_tutor"><pose>-8.725 -0.042 0.567 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.008</radius><length>0.893</length></cylinder></geometry><material><ambient>0.55 0.40 0.25 1</ambient><diffuse>0.55 0.40 0.25 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="t0_mata"><pose>-8.725 -0.042 0.536 0.000 0.000 0.000</pose><geometry><sphere><radius>0.220</radius></sphere></geometry><material><ambient>0.12 0.38 0.10 1</ambient><diffuse>0.12 0.38 0.10 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="t0_mata2"><pose>-8.675 -0.082 0.779 0.000 0.000 0.000</pose><geometry><sphere><radius>0.150</radius></sphere></geometry><material><ambient>0.12 0.38 0.10 1</ambient><diffuse>0.12 0.38 0.10 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
@@ -1438,8 +1506,15 @@
       <link name="link">
         <collision name="collision"><pose>0 0 0.060 0 0 0</pose>
           <geometry><box><size>18.000 0.500 0.120</size></box></geometry></collision>
-        <visual name="tierra"><pose>0 0 0.060 0 0 0</pose>
-          <geometry><box><size>18.000 0.500 0.120</size></box></geometry><material><ambient>0.35 0.23 0.13 1</ambient><diffuse>0.35 0.23 0.13 1</diffuse></material></visual>
+        <visual name="tierra_0"><pose>-8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_1"><pose>-6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_2"><pose>-4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_3"><pose>-2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_4"><pose>0.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_5"><pose>2.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_6"><pose>4.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_7"><pose>6.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="tierra_8"><pose>8.000 0.000 0.060 0.000 0.000 0.000</pose><geometry><box><size>2.000 0.500 0.120</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/caballon.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
         <visual name="t0_tutor"><pose>-8.777 -0.044 0.664 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.008</radius><length>1.088</length></cylinder></geometry><material><ambient>0.55 0.40 0.25 1</ambient><diffuse>0.55 0.40 0.25 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="t0_mata"><pose>-8.777 -0.044 0.653 0.000 0.000 0.000</pose><geometry><sphere><radius>0.220</radius></sphere></geometry><material><ambient>0.12 0.38 0.10 1</ambient><diffuse>0.12 0.38 0.10 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="t0_mata2"><pose>-8.727 -0.084 0.963 0.000 0.000 0.000</pose><geometry><sphere><radius>0.150</radius></sphere></geometry><material><ambient>0.12 0.38 0.10 1</ambient><diffuse>0.12 0.38 0.10 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
@@ -1764,6 +1839,358 @@
         <visual name="h116"><pose>10.617 1.903 0.042 0.000 0.000 0.000</pose><geometry><sphere><radius>0.070</radius></sphere></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="h117"><pose>-1.391 -0.150 0.019 0.000 0.000 0.000</pose><geometry><sphere><radius>0.032</radius></sphere></geometry><material><ambient>0.12 0.38 0.10 1</ambient><diffuse>0.12 0.38 0.10 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
         <visual name="h119"><pose>24.659 -0.305 0.046 0.000 0.000 0.000</pose><geometry><sphere><radius>0.077</radius></sphere></geometry><material><ambient>0.20 0.55 0.15 1</ambient><diffuse>0.20 0.55 0.15 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+
+    <!-- Postes (Post): cabeceras de los surcos y valla -->
+    <model name="poste_ini_0">
+      <static>true</static>
+      <pose>1.700 -3.000 0.600 0 0 0.162</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_fin_0">
+      <static>true</static>
+      <pose>20.300 -3.000 0.600 0 0 1.990</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_ini_1">
+      <static>true</static>
+      <pose>1.700 -1.500 0.600 0 0 4.108</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_fin_1">
+      <static>true</static>
+      <pose>20.300 -1.500 0.600 0 0 1.968</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_ini_2">
+      <static>true</static>
+      <pose>1.700 0.000 0.600 0 0 2.607</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_fin_2">
+      <static>true</static>
+      <pose>20.300 0.000 0.600 0 0 4.460</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_ini_3">
+      <static>true</static>
+      <pose>1.700 1.500 0.600 0 0 5.243</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_fin_3">
+      <static>true</static>
+      <pose>20.300 1.500 0.600 0 0 0.984</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_ini_4">
+      <static>true</static>
+      <pose>1.700 3.000 0.600 0 0 0.117</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_fin_4">
+      <static>true</static>
+      <pose>20.300 3.000 0.600 0 0 1.322</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_ini_5">
+      <static>true</static>
+      <pose>1.700 4.500 0.600 0 0 3.325</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="poste_fin_5">
+      <static>true</static>
+      <pose>20.300 4.500 0.600 0 0 5.279</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_0">
+      <static>true</static>
+      <pose>-2.500 6.500 0.600 0 0 2.247</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_1">
+      <static>true</static>
+      <pose>0.000 6.500 0.600 0 0 2.272</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_2">
+      <static>true</static>
+      <pose>2.500 6.500 0.600 0 0 2.161</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_3">
+      <static>true</static>
+      <pose>5.000 6.500 0.600 0 0 4.271</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_4">
+      <static>true</static>
+      <pose>7.500 6.500 0.600 0 0 5.438</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_5">
+      <static>true</static>
+      <pose>10.000 6.500 0.600 0 0 0.963</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_6">
+      <static>true</static>
+      <pose>12.500 6.500 0.600 0 0 6.163</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_7">
+      <static>true</static>
+      <pose>15.000 6.500 0.600 0 0 3.611</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_8">
+      <static>true</static>
+      <pose>17.500 6.500 0.600 0 0 1.444</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_9">
+      <static>true</static>
+      <pose>20.000 6.500 0.600 0 0 3.885</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_10">
+      <static>true</static>
+      <pose>22.500 6.500 0.600 0 0 5.108</pose>
+      <link name="link">
+        <collision name="collision"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry></collision>
+        <visual name="visual"><geometry><cylinder><radius>0.050</radius><length>1.200</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/madera.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material></visual>
+      </link>
+    </model>
+    <model name="valla_alambre">
+      <static>true</static>
+      <link name="link">
+        <visual name="alambre_0"><pose>10.000 6.500 0.500 0.000 1.571 0.000</pose><geometry><cylinder><radius>0.005</radius><length>25.000</length></cylinder></geometry><material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.5 0.5 0.5 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="alambre_1"><pose>10.000 6.500 0.950 0.000 1.571 0.000</pose><geometry><cylinder><radius>0.005</radius><length>25.000</length></cylinder></geometry><material><ambient>0.5 0.5 0.5 1</ambient><diffuse>0.5 0.5 0.5 1</diffuse></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+
+    <!-- Frutales (Trunk) -->
+    <model name="frutal_0">
+      <static>true</static>
+      <pose>1.991 -5.500 0 0 0 3.451</pose>
+      <link name="link">
+        <collision name="tronco"><pose>0 0 0.556 0 0 0</pose>
+          <geometry><cylinder><radius>0.106</radius><length>1.113</length></cylinder></geometry></collision>
+        <visual name="tronco"><pose>0.000 0.000 0.556 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.106</radius><length>1.113</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama1"><pose>0.150 0.000 1.213 0.000 0.600 0.000</pose><geometry><cylinder><radius>0.048</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama2"><pose>-0.120 0.050 1.213 0.000 -0.500 0.300</pose><geometry><cylinder><radius>0.048</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="copa"><pose>0.000 0.000 1.777 0.000 0.000 0.000</pose><geometry><sphere><radius>0.830</radius></sphere></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/hojas.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+    <model name="frutal_1">
+      <static>true</static>
+      <pose>5.083 -5.500 0 0 0 1.720</pose>
+      <link name="link">
+        <collision name="tronco"><pose>0 0 0.662 0 0 0</pose>
+          <geometry><cylinder><radius>0.094</radius><length>1.324</length></cylinder></geometry></collision>
+        <visual name="tronco"><pose>0.000 0.000 0.662 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.094</radius><length>1.324</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama1"><pose>0.150 0.000 1.424 0.000 0.600 0.000</pose><geometry><cylinder><radius>0.043</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama2"><pose>-0.120 0.050 1.424 0.000 -0.500 0.300</pose><geometry><cylinder><radius>0.043</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="copa"><pose>0.000 0.000 1.968 0.000 0.000 0.000</pose><geometry><sphere><radius>0.806</radius></sphere></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/hojas.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+    <model name="frutal_2">
+      <static>true</static>
+      <pose>7.901 -5.500 0 0 0 6.135</pose>
+      <link name="link">
+        <collision name="tronco"><pose>0 0 0.662 0 0 0</pose>
+          <geometry><cylinder><radius>0.084</radius><length>1.323</length></cylinder></geometry></collision>
+        <visual name="tronco"><pose>0.000 0.000 0.662 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.084</radius><length>1.323</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama1"><pose>0.150 0.000 1.423 0.000 0.600 0.000</pose><geometry><cylinder><radius>0.038</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama2"><pose>-0.120 0.050 1.423 0.000 -0.500 0.300</pose><geometry><cylinder><radius>0.038</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="copa"><pose>0.000 0.000 2.013 0.000 0.000 0.000</pose><geometry><sphere><radius>0.862</radius></sphere></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/hojas.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+    <model name="frutal_3">
+      <static>true</static>
+      <pose>10.860 -5.500 0 0 0 5.884</pose>
+      <link name="link">
+        <collision name="tronco"><pose>0 0 0.676 0 0 0</pose>
+          <geometry><cylinder><radius>0.096</radius><length>1.352</length></cylinder></geometry></collision>
+        <visual name="tronco"><pose>0.000 0.000 0.676 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.096</radius><length>1.352</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama1"><pose>0.150 0.000 1.452 0.000 0.600 0.000</pose><geometry><cylinder><radius>0.043</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama2"><pose>-0.120 0.050 1.452 0.000 -0.500 0.300</pose><geometry><cylinder><radius>0.043</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="copa"><pose>0.000 0.000 2.068 0.000 0.000 0.000</pose><geometry><sphere><radius>0.896</radius></sphere></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/hojas.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+    <model name="frutal_4">
+      <static>true</static>
+      <pose>14.050 -5.500 0 0 0 4.882</pose>
+      <link name="link">
+        <collision name="tronco"><pose>0 0 0.574 0 0 0</pose>
+          <geometry><cylinder><radius>0.102</radius><length>1.149</length></cylinder></geometry></collision>
+        <visual name="tronco"><pose>0.000 0.000 0.574 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.102</radius><length>1.149</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama1"><pose>0.150 0.000 1.249 0.000 0.600 0.000</pose><geometry><cylinder><radius>0.046</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama2"><pose>-0.120 0.050 1.249 0.000 -0.500 0.300</pose><geometry><cylinder><radius>0.046</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="copa"><pose>0.000 0.000 1.742 0.000 0.000 0.000</pose><geometry><sphere><radius>0.741</radius></sphere></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/hojas.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+    <model name="frutal_5">
+      <static>true</static>
+      <pose>16.904 -5.500 0 0 0 5.469</pose>
+      <link name="link">
+        <collision name="tronco"><pose>0 0 0.671 0 0 0</pose>
+          <geometry><cylinder><radius>0.110</radius><length>1.342</length></cylinder></geometry></collision>
+        <visual name="tronco"><pose>0.000 0.000 0.671 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.110</radius><length>1.342</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama1"><pose>0.150 0.000 1.442 0.000 0.600 0.000</pose><geometry><cylinder><radius>0.049</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama2"><pose>-0.120 0.050 1.442 0.000 -0.500 0.300</pose><geometry><cylinder><radius>0.049</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="copa"><pose>0.000 0.000 2.047 0.000 0.000 0.000</pose><geometry><sphere><radius>0.881</radius></sphere></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/hojas.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+    <model name="frutal_6">
+      <static>true</static>
+      <pose>20.142 -5.500 0 0 0 4.456</pose>
+      <link name="link">
+        <collision name="tronco"><pose>0 0 0.706 0 0 0</pose>
+          <geometry><cylinder><radius>0.101</radius><length>1.412</length></cylinder></geometry></collision>
+        <visual name="tronco"><pose>0.000 0.000 0.706 0.000 0.000 0.000</pose><geometry><cylinder><radius>0.101</radius><length>1.412</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama1"><pose>0.150 0.000 1.512 0.000 0.600 0.000</pose><geometry><cylinder><radius>0.046</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rama2"><pose>-0.120 0.050 1.512 0.000 -0.500 0.300</pose><geometry><cylinder><radius>0.046</radius><length>0.600</length></cylinder></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/corteza.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="copa"><pose>0.000 0.000 2.028 0.000 0.000 0.000</pose><geometry><sphere><radius>0.770</radius></sphere></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/hojas.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+      </link>
+    </model>
+
+    <!-- Charcos (Puddle), baches (Pothole) y rodadas (Trace): visuales sobre el suelo -->
+    <model name="suelo_objetos">
+      <static>true</static>
+      <link name="link">
+        <visual name="charco_0"><pose>8.000 -2.250 0.006 0.000 0.000 1.386</pose><geometry><box><size>0.900 0.600 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/charco.png</albedo_map><roughness>0.15</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="charco_1"><pose>-0.800 2.600 0.006 0.000 0.000 2.700</pose><geometry><box><size>1.300 0.800 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/charco.png</albedo_map><roughness>0.15</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="charco_2"><pose>21.500 0.000 0.006 0.000 0.000 0.669</pose><geometry><box><size>1.000 1.400 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/charco.png</albedo_map><roughness>0.15</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="bache_0"><pose>12.000 -0.750 0.006 0.000 0.000 0.000</pose><geometry><box><size>0.600 0.600 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/bache.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="bache_1"><pose>0.200 -1.500 0.006 0.000 0.000 0.000</pose><geometry><box><size>0.700 0.700 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/bache.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="bache_2"><pose>22.000 3.000 0.006 0.000 0.000 0.000</pose><geometry><box><size>0.800 0.800 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/bache.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_0"><pose>2.750 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_1"><pose>4.250 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_2"><pose>5.750 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_3"><pose>7.250 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_4"><pose>8.750 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_5"><pose>10.250 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_6"><pose>11.750 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_7"><pose>13.250 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_8"><pose>14.750 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_9"><pose>16.250 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_10"><pose>17.750 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_0_11"><pose>19.250 2.000 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_0"><pose>2.750 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_1"><pose>4.250 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_2"><pose>5.750 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_3"><pose>7.250 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_4"><pose>8.750 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_5"><pose>10.250 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_6"><pose>11.750 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_7"><pose>13.250 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_8"><pose>14.750 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_9"><pose>16.250 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_10"><pose>17.750 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_0_2_11"><pose>19.250 2.500 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_0"><pose>-2.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_1"><pose>-0.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_2"><pose>0.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_3"><pose>2.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_4"><pose>3.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_5"><pose>5.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_6"><pose>6.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_7"><pose>8.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_8"><pose>9.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_9"><pose>11.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_10"><pose>12.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_11"><pose>14.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_12"><pose>15.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_13"><pose>17.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_14"><pose>18.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_15"><pose>20.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_16"><pose>21.750 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_0_17"><pose>23.250 -4.650 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_0"><pose>-2.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_1"><pose>-0.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_2"><pose>0.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_3"><pose>2.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_4"><pose>3.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_5"><pose>5.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_6"><pose>6.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_7"><pose>8.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_8"><pose>9.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_9"><pose>11.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_10"><pose>12.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_11"><pose>14.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_12"><pose>15.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_13"><pose>17.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_14"><pose>18.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_15"><pose>20.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_16"><pose>21.750 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
+        <visual name="rodada_1_2_17"><pose>23.250 -4.150 0.005 0.000 0.000 0.000</pose><geometry><box><size>1.500 0.180 0.002</size></box></geometry><material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse><specular>0.1 0.1 0.1 1</specular><pbr><metal><albedo_map>model://campo_texturas/rodada.png</albedo_map><roughness>0.9</roughness><metalness>0.0</metalness></metal></pbr></material><cast_shadows>false</cast_shadows></visual>
       </link>
     </model>
 

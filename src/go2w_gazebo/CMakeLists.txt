@@ -3,7 +3,7 @@ project(go2w_gazebo)
 
 find_package(ament_cmake REQUIRED)
 
-install(DIRECTORY worlds launch urdf config rviz
+install(DIRECTORY worlds launch urdf config rviz models maps
   DESTINATION share/${PROJECT_NAME}
 )
 

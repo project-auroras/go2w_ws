@@ -47,3 +47,23 @@
   ros_type_name: sensor_msgs/msg/NavSatFix
   gz_type_name: gz.msgs.NavSat
   direction: GZ_TO_ROS
+
+# RealSense (urdf/gazebo.xml): same topics as realsense2_camera with align_depth, so yolo_ros
+# configs work unchanged. RGB and depth come from one sensor: already aligned
+- ros_topic_name: /camera/camera/color/image_raw
+  gz_topic_name: sim/rgbd/image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /camera/camera/color/camera_info
+  gz_topic_name: sim/rgbd/camera_info
+  ros_type_name: sensor_msgs/msg/CameraInfo
+  gz_type_name: gz.msgs.CameraInfo
+  direction: GZ_TO_ROS
+
+- ros_topic_name: /camera/camera/aligned_depth_to_color/image_raw
+  gz_topic_name: sim/rgbd/depth_image
+  ros_type_name: sensor_msgs/msg/Image
+  gz_type_name: gz.msgs.Image
+  direction: GZ_TO_ROS
