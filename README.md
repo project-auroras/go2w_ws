@@ -4,24 +4,54 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 
 | Paquete | Qué hace |
 |---|---|
-| `go2w_description` | URDF y mallas del Go2-W (de `unitreerobotics/unitree_ros`), con raíz `base_link`, frame `utlidar_lidar` y la RealSense D435i (`camera_link`, medida en el soporte delantero) |
-| `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `sportmodestate` → `/odom` y TF `odom → base_footprint → base_link`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
-| `go2w_bringup` | Lanza description + driver + `/utlidar/cloud` → `/scan` + RViz |
+| `go2w_description` | URDF y mallas del Go2-W (de `unitreerobotics/unitree_ros`), con raíz `base_link` y frame `utlidar_lidar` |
+| `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `/odom` y TF `odom → base_footprint → base_link` desde FAST-LIO (`odom_source: lio`, por defecto), las ruedas (`wheels`, en `sim:=true`) o `sportmodestate`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
+| `go2w_bringup` | Lanza description + driver + FAST-LIO (`lio:=true`) + `/utlidar/cloud` → `/scan` + RViz |
+| `go2w_gazebo` | Go2-W en Gazebo Harmonic sobre mundos de `navmap_gis_tool` |
+| `worlds/gis_*` | Mundos generados con `navmap_gis_tool` (`gis_mic_recinto_world`: recinto del MIC, León) |
 | `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
 | `go2w_perception` | Detección de personas con YOLO26 (`yolo_ros`) en la RealSense: `people_bag.launch.py` alinea la profundidad del rosbag al color, lanza `yolo_node` (detección + tracking + 3D) y `person_filter` publica solo las personas en `/people` |
 | `go2w_gazebo` | Simulación en Gazebo Fortress: escena con objetos y una persona que camina, el Go2-W con RealSense simulada, YOLO26 y sigue-personas. Ver [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md) |
 
-Paquetes de terceros copiados como código en `src/` (sin `.git`; para actualizarlos, sustituir la carpeta por la nueva versión y anotar aquí el commit):
+Dependencias externas, en `deps.repos` con commits fijos. `scripts/install_deps.sh ws` las clona en `src/external/` (no versionado); para actualizar una, cambiar su `version` en `deps.repos` y volver a ejecutarlo:
 
 | Paquete | Origen | Versión | Commit |
 |---|---|---|---|
+| `unitree_go`, `unitree_api`, `go2_interfaces` | [Unitree-Go2-Robot](https://github.com/Unitree-Go2-Robot) | | ver `deps.repos` |
+| `fast_lio_go2` | [aron-assani/fast_lio_go2](https://github.com/aron-assani/fast_lio_go2) (FAST-LIO2 con soporte de `/utlidar/cloud`) | | `540b85b` |
 | `EasyNavigation` | [EasyNavigation/EasyNavigation](https://github.com/EasyNavigation/EasyNavigation) | 0.5.0 | `9ca3cca` |
 | `easynav_plugins` | [EasyNavigation/easynav_plugins](https://github.com/EasyNavigation/easynav_plugins) | 0.5.0 | `2580d29` |
 | `NavMap` | [EasyNavigation/NavMap](https://github.com/EasyNavigation/NavMap) | 0.6.0 | `c96d8c8` |
 | `yaets` | [fmrico/yaets](https://github.com/fmrico/yaets) | 1.2.0 | `1452f14` |
 | `yolo_ros` | [mgonzs13/yolo_ros](https://github.com/mgonzs13/yolo_ros) | 5.0.0 | `7924a8b` |
 
-Dependencias externas (en `deps.repos`, con commits fijos): `unitree_go`, `unitree_api`, `go2_interfaces` de [Unitree-Go2-Robot](https://github.com/Unitree-Go2-Robot).
+`src/third_party/livox_ros_driver2` es lo único de terceros versionado aquí: solo los mensajes de Livox que necesita `fast_lio` para compilar (no existe como repo aparte).
+
+## Estructura
+
+```
+src/
+  go2w_*/         paquetes propios
+  worlds/         mundos de Gazebo (navmap_gis_tool)
+  third_party/    livox_ros_driver2 recortado (solo mensajes)
+  external/       repos de deps.repos (no versionado, lo crea install_deps.sh)
+config/           parámetros de EasyNav y slam_toolbox
+scripts/          instalación, entorno, red PC/NX
+docker/           imagen de desarrollo del PC
+```
+
+## Cómo trabajamos (ramas)
+
+- `main` siempre compila y es lo que se lleva al robot. No se hacen commits directos a `main`.
+- Cada cambio va en una rama desde `main` actualizado: `feat/...`, `fix/...`, `chore/...`, `docs/...`.
+  ```bash
+  git switch main && git pull
+  git switch -c feat/mi-cambio
+  # ... commits ...
+  git push -u origin feat/mi-cambio   # y abrir una Pull Request en GitHub
+  ```
+- La PR se fusiona cuando la CI (build) pasa y la ha mirado la otra persona.
+- Para traer cambios nuevos de `main` a tu rama: `git pull --rebase origin main` si la rama es solo tuya, `git merge main` si la compartís. No hacer `push --force` sobre ramas compartidas ni sobre `main`.
 
 ## Flujo de trabajo
 
@@ -168,10 +198,10 @@ ros2 launch go2w_gazebo simulacion.launch.py follower:=true y:=7.0 # sigue-perso
 Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con las patas en el orden de Unitree.
 
 1. **Frame de la nube**: `/utlidar/cloud` debe salir alineada con el suelo en RViz. Si no, ajustar `utlidar_lidar_joint` en el URDF.
-2. **Odometría**: comprobar que `velocity` de `sportmodestate` está en el frame del mundo y que la altura de `base_link` es razonable (`base_height_offset`).
+2. **Odometría**: el Go2-W no publica odometría (`sportmodestate` da position/velocity a 0 y `/utlidar/robot_odom` no publica; Unitree aún no la ha sacado para el Go2-W). Confirmado también en los rosbags del sigue-personas (2026-11-11), grabados con `odom_source: sportmodestate`: `/odom` con x, y y velocidad siempre a 0 aunque el robot se movía; solo cambiaba la orientación (IMU). Se usa FAST-LIO sobre `/utlidar/cloud` + `/utlidar/imu`. Arrancar con el robot quieto ~2 s. Comprobar: 1 m adelante → `/odom` x≈1; giro 90° → yaw≈1.57; con las ruedas girando en el aire `/odom` no se mueve. Si los ejes salen girados, revisar `utlidar_lidar_joint`. Alternativa: `lio:=false` (odometría por ruedas).
 3. ~~**Move en modo ruedas**~~ Verificado (2026-11-06): el Go2-W acepta la API 1008 (Move) como el Go2. Hace falta `ROS_DOMAIN_ID=0` (el software de Unitree está en el dominio 0) y `balance_stand` antes de moverlo: `stand_up` lo deja bloqueado.
 4. **QoS**: si algún topic de Unitree no llega, revisar `ros2 topic info -v`.
 
 ## Siguiente paso: EasyNav
 
-EasyNav 0.5.0 (EasyNavigation, easynav_plugins, NavMap, yaets) está en `src/` como código; se compila con el resto del workspace.
+EasyNav 0.5.0 (EasyNavigation, easynav_plugins, NavMap, yaets) se clona en `src/external/` desde `deps.repos`; se compila con el resto del workspace.

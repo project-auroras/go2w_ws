@@ -1,0 +1,103 @@
+# EasyNav for the Go2-W in Gazebo (go2w_gazebo go2w_gis.launch.py) on a navmap_gis_tool world.
+#   ros2 run easynav_system system_main --ros-args --params-file config/easynav_gis_sim.params.yaml
+# Goals: RViz "2D Goal Pose" (/goal_pose) in frame map. map = Gazebo world = GIS local ENU.
+# Change maps_manager_node.navmap.package / navmap_path_file for another generated world.
+controller_node:
+  ros__parameters:
+    use_sim_time: true
+    controller_types: [simple]
+    simple:
+      rt_freq: 30.0
+      plugin: easynav_simple_controller/SimpleController
+      look_ahead_dist: 0.6
+      tolerance_dist: 0.1
+      final_goal_angle_tolerance: 0.15
+    # Same limits as go2w_driver (max_vx 1.0, max_wz 1.5), lower for the first tests
+    robot_limits:
+      max_linear_vel: 0.5
+      min_linear_vel: 0.0
+      max_angular_vel: 1.0
+
+# /odom of the sim is ground truth: map -> odom only aligns the frames (identity here).
+# On the real robot this would fuse FAST-LIO /odom (+ /gps/fix).
+localizer_node:
+  ros__parameters:
+    use_sim_time: true
+    localizer_types: [fusion]
+    fusion:
+      rt_freq: 50.0
+      freq: 5.0
+      reseed_freq: 0.1
+      plugin: easynav_fusion_localizer/FusionLocalizer
+      global_filter:
+        two_d_mode: false
+        publish_tf: true
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_footprint
+        world_frame: map
+        odom0: /odom
+        odom0_config:
+          [true,  true,  true,
+           true,  true,  true,
+           true,  false, false,
+           false, false, true,
+           false, false, false]
+        odom0_differential: false
+
+maps_manager_node:
+  ros__parameters:
+    use_sim_time: true
+    map_types: [navmap]
+    navmap:
+      freq: 10.0
+      plugin: easynav_navmap_maps_manager/NavMapMapsManager
+      package: gis_mic_recinto_world
+      navmap_path_file: maps/gis_mic_recinto.navmap
+      filters: [obstacles, inflation]
+      obstacles:
+        plugin: easynav_navmap_maps_manager/NavMapMapsManager/ObstaclesFilter
+        max_range: 10.0
+        # Generated terrain is smooth: anything 0.25 m over it is an obstacle
+        min_height: 0.25
+        max_height: 1.0
+      inflation:
+        plugin: easynav_navmap_maps_manager/NavMapMapsManager/InflationFilter
+        inflation_radius: 0.6
+
+planner_node:
+  ros__parameters:
+    use_sim_time: true
+    planner_types: [astar]
+    astar:
+      freq: 1.0
+      plugin: easynav_navmap_planner/AStarPlanner
+      continuous_replan: true
+
+sensors_node:
+  ros__parameters:
+    use_sim_time: true
+    forget_time: 0.5
+    sensors: [lidar]
+    perception_default_frame: odom
+    lidar:
+      topic: /utlidar/cloud
+      type: sensor_msgs/msg/PointCloud2
+      plugin: easynav_sensors/PointPerceptionHandler
+
+system_node:
+  ros__parameters:
+    use_sim_time: true
+    robot_frame: base_link
+    robot_footprint_frame: base_footprint
+    odom_frame: odom
+    map_frame: map
+    position_tolerance: 0.3
+    # Every goal (also intermediate waypoints) must match yaw too
+    angle_tolerance: 0.3
+    # base_footprint is at body height in the sim (~0.44 m over the terrain): goal z is ground
+    height_tolerance: 1.0
+    # Go2-W footprint ~0.7 x 0.45 m
+    robot_geometry:
+      radius: 0.4
+      height: 0.6

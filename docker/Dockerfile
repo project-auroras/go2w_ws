@@ -1,6 +1,13 @@
 # Development image for the PC: same OS and ROS as the NX (Ubuntu 22.04 + Humble).
 # The NX does not use this image, it builds natively (scripts/nx_update.sh).
 ARG BASE_IMAGE=ros:humble-ros-base
+
+# Only the package.xml files of src/, so the rosdep layer below is rebuilt
+# when dependencies change, not on every source edit.
+FROM ${BASE_IMAGE} AS pkgs
+COPY src /src
+RUN mkdir /pkgs && cd /src && find . -name package.xml -exec cp --parents {} /pkgs \;
+
 FROM ${BASE_IMAGE}
 
 ARG USERNAME=dev
@@ -13,6 +20,29 @@ COPY scripts/install_deps.sh /tmp/install_deps.sh
 RUN /tmp/install_deps.sh system \
     && apt-get install -y --no-install-recommends sudo bash-completion less vim \
     && rm -rf /var/lib/apt/lists/* /tmp/install_deps.sh
+
+# Gazebo Harmonic + its ros_gz from the OSRF repo (PC only, not on the NX).
+# navmap_gis_tool generates gz-sim worlds, which Fortress (Humble's default) can't run.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl gnupg lsb-release \
+    && curl -sSL https://packages.osrfoundation.org/gazebo.gpg \
+        -o /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" \
+        > /etc/apt/sources.list.d/gazebo-stable.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gz-harmonic ros-humble-ros-gzharmonic \
+    && rm -rf /var/lib/apt/lists/*
+
+# Workspace dependencies (same as `install_deps.sh ws`), baked in so a
+# recreated container doesn't lose them. src/external must be imported first.
+# ros_gz keys resolve to the Fortress packages on Humble, which conflict with
+# ros-humble-ros-gzharmonic installed above.
+COPY --from=pkgs /pkgs /tmp/ws_pkgs
+RUN apt-get update \
+    && rosdep update --rosdistro humble \
+    && rosdep install --from-paths /tmp/ws_pkgs --ignore-src --rosdistro humble -y -r \
+        --skip-keys "ros_gz ros_gz_sim ros_gz_bridge gz_sim_vendor gz_plugin_vendor" \
+    && rm -rf /var/lib/apt/lists/* /tmp/ws_pkgs
 
 # PlotJuggler 4 from its apt repo (PC only, not on the NX)
 COPY docker/plotjuggler.asc /etc/apt/keyrings/plotjuggler.asc

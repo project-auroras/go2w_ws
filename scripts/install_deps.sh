@@ -25,6 +25,7 @@ install_system() {
     ros-humble-tf2-ros \
     ros-humble-tf2-tools \
     ros-humble-pointcloud-to-laserscan \
+    ros-humble-pcl-ros \
     ros-humble-rviz2 \
     ros-humble-plotjuggler-ros \
     ros-humble-slam-toolbox
@@ -36,7 +37,9 @@ install_ws() {
   vcs import --recursive "$WS/src/external" < "$WS/deps.repos"
   rosdep update --rosdistro humble
   $SUDO apt-get update
-  rosdep install --from-paths "$WS/src" --ignore-src --rosdistro humble -y -r
+  # ros_gz keys: Fortress on Humble, conflicts with the Harmonic ros_gz of the PC image
+  rosdep install --from-paths "$WS/src" --ignore-src --rosdistro humble -y -r \
+    --skip-keys "ros_gz ros_gz_sim ros_gz_bridge gz_sim_vendor gz_plugin_vendor"
 }
 
 case "${1:-all}" in

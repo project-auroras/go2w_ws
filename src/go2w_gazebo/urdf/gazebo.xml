@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<!-- Gazebo additions merged into go2w.urdf.xacro by go2w_gis.launch.py (inside <robot>). -->
+<robot name="go2w">
+
+  <!-- Generic level 3D LiDAR on top of the body. Not a model of the L1: it only has to feed
+       pointcloud_to_laserscan, which works in base_link. -->
+  <link name="sim_lidar"/>
+  <joint name="sim_lidar_joint" type="fixed">
+    <origin xyz="0 0 0.12" rpy="0 0 0"/>
+    <parent link="base"/>
+    <child link="sim_lidar"/>
+  </joint>
+
+  <gazebo reference="sim_lidar">
+    <sensor name="lidar" type="gpu_lidar">
+      <topic>sim/lidar</topic>
+      <gz_frame_id>sim_lidar</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>1</always_on>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>720</samples>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>16</samples>
+            <min_angle>-0.2618</min_angle>
+            <max_angle>0.2618</max_angle>
+          </vertical>
+        </scan>
+        <range>
+          <min>0.15</min>
+          <max>30.0</max>
+        </range>
+      </lidar>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="imu">
+    <sensor name="imu" type="imu">
+      <topic>sim/imu</topic>
+      <gz_frame_id>imu</gz_frame_id>
+      <update_rate>100</update_rate>
+      <always_on>1</always_on>
+    </sensor>
+  </gazebo>
+
+  <gazebo reference="base_link">
+    <sensor name="navsat" type="navsat">
+      <topic>sim/navsat</topic>
+      <gz_frame_id>base_link</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>1</always_on>
+    </sensor>
+  </gazebo>
+
+  <gazebo>
+    <!-- Skid steer on the four wheels. Its own odometry is not bridged: wheel slip makes it
+         drift, /odom comes from OdometryPublisher (ground truth) -->
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>FL_foot_joint</left_joint>
+      <left_joint>RL_foot_joint</left_joint>
+      <right_joint>FR_foot_joint</right_joint>
+      <right_joint>RR_foot_joint</right_joint>
+      <!-- Real track is 0.38 m; skid steer slips, so with 0.38 it turns at ~half the
+           commanded rate. 0.76 measured to track /cmd_vel angular.z -->
+      <wheel_separation>0.76</wheel_separation>
+      <wheel_radius>0.086</wheel_radius>
+      <topic>sim/cmd_vel</topic>
+      <odom_topic>sim/wheel_odom</odom_topic>
+      <tf_topic>sim/wheel_tf</tf_topic>
+      <max_linear_acceleration>2.0</max_linear_acceleration>
+      <max_angular_acceleration>4.0</max_angular_acceleration>
+    </plugin>
+
+    <plugin filename="gz-sim-odometry-publisher-system"
+      name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_footprint</robot_base_frame>
+      <odom_topic>sim/odom</odom_topic>
+      <tf_topic>sim/tf</tf_topic>
+      <dimensions>3</dimensions>
+      <odom_publish_frequency>50</odom_publish_frequency>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-state-publisher-system"
+      name="gz::sim::systems::JointStatePublisher">
+      <topic>sim/joint_states</topic>
+    </plugin>
+  </gazebo>
+
+</robot>

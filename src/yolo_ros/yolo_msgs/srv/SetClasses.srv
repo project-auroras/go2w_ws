@@ -1,5 +1,0 @@
-# Classes to publish (by class name). Empty = publish every class.
-string[] classes
----
-bool success
-string message

@@ -88,7 +88,7 @@ def launch_setup(context):
             executable='parameter_bridge',
             parameters=[{
                 'config_file': PathJoinSubstitution(
-                    [FindPackageShare('go2w_gazebo'), 'config', 'bridge.yaml']).perform(
+                    [FindPackageShare('go2w_gazebo'), 'config', 'bridge_follower.yaml']).perform(
                         context),
                 'use_sim_time': True,
             }],

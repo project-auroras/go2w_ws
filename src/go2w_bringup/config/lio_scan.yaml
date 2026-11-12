@@ -1,0 +1,14 @@
+lio_scan:
+  ros__parameters:
+    # Seconds of FAST-LIO clouds merged into each /scan
+    window: 1.0
+    base_frame: base_link
+    lidar_frame: utlidar_lidar
+    # Height band in base_link. The floor is at z ~ -0.55 (bag 2026-10-28)
+    min_height: -0.35
+    max_height: 1.0
+    # Points inside this box are the robot itself: [x_min, x_max, y_min, y_max] in base_link
+    self_box: [-0.55, 0.45, -0.35, 0.35]
+    angle_increment: 0.0087
+    range_min: 0.3
+    range_max: 15.0
