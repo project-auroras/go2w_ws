@@ -1,4 +1,4 @@
-# go2w_perception — detección y seguimiento de personas con YOLO26
+# go2w_perception — detección y seguimiento de personas con YOLO26 y navegación semántica
 
 Guía paso a paso para detectar personas con YOLO26 (`yolo_ros` + ONNX Runtime en GPU) en un rosbag de la RealSense del Go2-W, en el PC y dentro de Docker.
 
@@ -236,6 +236,19 @@ ros2 launch go2w_perception people_live.launch.py follower:=true max_linear:=0.2
   - si mientras tanto aparece una detección a menos de `reacquire_radius` (1 m) de donde estaba, se **reengancha** a ella aunque tenga otro ID (`Persona X reenganchada como Y`);
   - al empezar, solo elige personas a menos de `max_start_distance` (3 m).
 - `person_filter` descarta las detecciones con `score` < `min_score` (0,6) o una caja de menos de `min_height_px` (60 px) de alto: falsos positivos como trozos en el borde de la imagen.
+
+## 10. Navegación semántica (modelo propio)
+
+Nodos para navegar con un modelo YOLO26 entrenado con clases propias (`models/yolo26m_datasetFinal.onnx`: Row, Trace, Trunk, Post, Pothole, Puddle, person, animales y frutas). `yolo_ros` lo carga con `model_path`. El modelo se exportó sin NMS, así que lo aplica `yolo_ros`, y las clases las lee de los metadatos del ONNX.
+
+| Nodo | Entrada | Salida |
+|---|---|---|
+| `semantic_mapper` | `/yolo/cam0/detections_3d` + TF | `/semantic/landmarks` (`DetectionArray` en `map`, `id` = objeto), `/semantic/markers`, servicio `~/save` |
+| `semantic_goal` | `/semantic/goal_request` (`"Post"`, `"Post:3"`) | `/goal_pose` para EasyNav, `/semantic/goal_status` |
+| `row_follower` | `/yolo/cam0/detections_3d` (Row, Trace), `/semantic/row_follow` (Bool) | `/goal_pose` sobre el eje del pasillo, `/semantic/row_status`, `/semantic/row_markers` |
+| `class_stats` | `/yolo/cam0/detections_3d` | Recuento por clase cada 5 s en el log (para ver qué detecta el modelo) |
+
+Parámetros en `config/semantic_nav.yaml`. Cómo probarlo en Gazebo: [go2w_gazebo/README.md](../go2w_gazebo/README.md#navegación-semántica-modelo-propio--easynav).
 
 ## Problemas habituales
 

@@ -3,7 +3,7 @@
 <package format="3">
   <name>go2w_perception</name>
   <version>0.0.0</version>
-  <description>Detección de personas con YOLO26 (yolo_ros) sobre la RealSense del Go2-W</description>
+  <description>Detección YOLO26 (yolo_ros) en la RealSense del Go2-W: personas, sigue-personas y navegación semántica</description>
   <maintainer email="unitree@todo.todo">unitree</maintainer>
   <license>TODO: License declaration</license>
 
@@ -12,6 +12,8 @@
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>visualization_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
 
   <exec_depend>go2w_bringup</exec_depend>
   <exec_depend>rviz2</exec_depend>
@@ -19,6 +21,7 @@
   <exec_depend>compressed_image_transport</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <exec_depend>rqt_image_view</exec_depend>
 
   <exec_depend>yolo_bringup</exec_depend>

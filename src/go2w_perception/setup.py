@@ -20,7 +20,8 @@ setup(
     zip_safe=True,
     maintainer='unitree',
     maintainer_email='unitree@todo.todo',
-    description='Detección de personas con YOLO26 sobre la RealSense del Go2-W',
+    description=('Detección YOLO26 en la RealSense del Go2-W: personas, sigue-personas y '
+                 'navegación semántica'),
     license='TODO: License declaration',
     extras_require={
         'test': [
@@ -33,6 +34,10 @@ setup(
             'person_follower = go2w_perception.person_follower:main',
             'fake_person = go2w_perception.fake_person:main',
             'depth_decompress = go2w_perception.depth_decompress:main',
+            'class_stats = go2w_perception.class_stats:main',
+            'semantic_mapper = go2w_perception.semantic_mapper:main',
+            'semantic_goal = go2w_perception.semantic_goal:main',
+            'row_follower = go2w_perception.row_follower:main',
         ],
     },
 )

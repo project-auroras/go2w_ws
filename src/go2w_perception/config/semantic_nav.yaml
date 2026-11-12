@@ -1,0 +1,47 @@
+# Navegación semántica con el modelo propio (models/yolo26m_datasetFinal.onnx, 47 clases).
+# Clases útiles para navegar: Row (surco), Trace (rodada), Trunk (tronco), Post (poste),
+# Pothole (bache), Puddle (charco). Las dinámicas (person, animales) no van al mapa.
+semantic_mapper:
+  ros__parameters:
+    input_topic: /yolo/cam0/detections_3d
+    map_frame: map
+    classes: [Row, Trace, Trunk, Post, Pothole, Puddle]
+    # radio de asociación (m) de cada clase, en el mismo orden: dos detecciones más cerca
+    # que esto son el mismo objeto. Row/Trace son largos: su centro se mueve con la vista
+    radii: [1.0, 1.0, 0.8, 0.5, 0.6, 1.0]
+    min_score: 0.4
+    max_range: 8.0      # m; más lejos la profundidad de la RealSense es poco fiable
+    min_hits: 3         # detecciones para confirmar un objeto
+    forget_s: 5.0       # s sin verlo para olvidar uno sin confirmar
+    alpha: 0.2          # peso de cada detección nueva en la posición media
+    publish_rate: 2.0
+    save_dir: /ws/maps  # ~/save escribe aquí semantic_<fecha>.yaml
+    load_file: ''       # un semantic_*.yaml para empezar con ese mapa
+
+semantic_goal:
+  ros__parameters:
+    map_frame: map
+    robot_frame: base_link
+    standoff: 1.0          # m entre el borde del objeto y la meta
+    arrive_tolerance: 0.4  # m (EasyNav: position_tolerance 0.3)
+
+row_follower:
+  ros__parameters:
+    input_topic: /yolo/cam0/detections_3d
+    odom_frame: odom
+    map_frame: map
+    robot_frame: base_link
+    row_classes: [Row]
+    center_classes: [Trace]
+    min_score: 0.4
+    window_s: 3.0           # s de detecciones que se usan
+    max_ahead: 6.0          # m
+    max_lateral: 2.0        # m
+    aisle_half_width: 0.75  # m del centro del surco al eje del pasillo (surcos cada 1.5 m)
+    min_spread: 1.0         # m en x para ajustar la pendiente de un surco
+    max_slope: 0.4          # pendiente máxima del eje respecto al robot
+    smoothing: 0.5          # 0: sin suavizar el eje entre ciclos
+    lookahead: 3.0          # m de la meta por delante
+    goal_period: 1.0        # s entre metas
+    end_timeout: 3.0        # s sin surcos delante = cabecera
+    end_advance: 1.5        # m de la última meta (para salir a la cabecera)
