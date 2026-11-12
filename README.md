@@ -166,7 +166,7 @@ ros2 topic echo /people           # yolo_msgs/DetectionArray, bbox3d.center = x 
 - Con la cámara real no hace falta alinear: lanzar la RealSense con `align_depth.enable:=true` y usar `aligned_depth_to_color`.
 - Los pesos de Ultralytics (YOLO26) son AGPL-3.0, no MIT como `yolo_ros`.
 
-### Simulación en Gazebo (detección de objetos y sigue-personas, `go2w_gazebo`)
+### Simulación en Gazebo (detección de objetos, sigue-personas y navegación semántica, `go2w_gazebo`)
 
 Guía completa en [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md). En resumen, dentro del contenedor:
 
@@ -175,6 +175,7 @@ colcon build --symlink-install --packages-select go2w_gazebo
 source scripts/env.sh
 ros2 launch go2w_gazebo simulacion.launch.py                       # detección de objetos
 ros2 launch go2w_gazebo simulacion.launch.py follower:=true y:=7.0 # sigue-personas
+ros2 launch go2w_gazebo semantica.launch.py                        # navegación semántica (+ EasyNav)
 ```
 
 ## Pendiente de verificar en el robot

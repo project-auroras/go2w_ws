@@ -1,6 +1,6 @@
-# go2w_gazebo — simulación del Go2-W en Gazebo (detección de objetos y sigue-personas)
+# go2w_gazebo — simulación del Go2-W en Gazebo (detección de objetos, sigue-personas y navegación semántica)
 
-Simulación en **Gazebo Fortress** para probar, antes de pasar al robot físico, que el Go2-W detecta objetos con YOLO26 y sigue a una persona.
+Simulación en **Gazebo Harmonic** para probar, antes de pasar al robot físico, que el Go2-W detecta objetos con YOLO26, sigue a una persona y navega por el campo con un modelo YOLO propio (navegación semántica, [abajo](#navegación-semántica-modelo-propio--easynav)).
 
 Usa la misma cadena que el robot real. Solo cambia de dónde sale la imagen (Gazebo en lugar de la RealSense) y a dónde va `/cmd_vel` (las ruedas de Gazebo en lugar de `go2w_driver`):
 
@@ -41,7 +41,7 @@ Gazebo (ruedas, DiffDrive) ◄──ros_gz_bridge── /cmd_vel ◄────
 ## Requisitos
 
 - Haber seguido el README de `go2w_perception` (pasos 1 a 3): imagen Docker y `yolo_ros` compilado con GPU.
-- Gazebo Fortress (`ros_gz`). No viene en la imagen: lo instala `scripts/install_deps.sh ws`.
+- Gazebo Harmonic y su `ros_gz`: vienen en la imagen Docker (`docker compose -f docker/compose.yaml build` si la imagen es anterior y `gz` no existe).
 
 ## Lanzar
 
@@ -131,6 +131,105 @@ Mover el robot a mano (sin `follower:=true`):
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
 ```
 
+## Navegación semántica (modelo propio + EasyNav)
+
+El robot navega por el campo con lo que ve un modelo YOLO26m entrenado con clases propias (`yolo26m_datasetFinal.onnx`, 47 clases). Las que se usan para navegar son **Row** (surco), **Trace** (rodada), **Trunk** (tronco), **Post** (poste), **Pothole** (bache) y **Puddle** (charco). Usa el robot de `go2w_gis.launch.py`, que tiene lidar, RealSense y los mismos topics que el real, y EasyNav para moverse:
+
+```
+RealSense sim ─► yolo_node (modelo propio, 3D en base_link) ─► /yolo/cam0/detections_3d
+                       │                                             │
+                       ▼                                             ▼
+              semantic_mapper ─► /semantic/landmarks         row_follower ◄── /semantic/row_follow (Bool)
+                       │                                             │
+ /semantic/goal_request ─► semantic_goal ──────────► /goal_pose ◄────┘
+                                                        │
+                                   EasyNav (NavMap plano del campo, lidar) ─► /cmd_vel ─► Gazebo
+```
+
+- `semantic_mapper`: acumula en `map` los objetos estáticos que ve (Row, Trace, Trunk, Post, Pothole, Puddle). Un objeto se confirma cuando lo ha visto 3 veces. En RViz salen como cajas con la etiqueta `Clase:id`.
+- `semantic_goal`: con `"Post"` va al poste más cercano del mapa y con `"Post:3"` al poste con id 3. Se para a 1 m del objeto, mirándolo.
+- `row_follower`: ajusta una recta a los surcos de cada lado y va mandando metas 3 m por delante sobre el eje del pasillo. Cuando deja de ver surcos (llega a la cabecera), se para.
+- Parámetros: `go2w_perception/config/semantic_nav.yaml`. YOLO: `config/yolo_semantic_gazebo.yaml`. EasyNav: `config/easynav_campo_sim.params.yaml` (en la raíz del repo).
+
+### Preparación (una vez)
+
+```bash
+# host: el modelo no va en git (82 MB). models/ del repo = /ws/models en el contenedor
+cp ~/yolo26m_datasetFinal.onnx ~/go2w_ws/models/
+```
+
+Dentro del contenedor, compilar como en el README de `go2w_perception` (yolo_ros con GPU) y:
+
+```bash
+colcon build --symlink-install --packages-select go2w_gazebo go2w_perception
+source scripts/env.sh
+```
+
+### Lanzar
+
+```bash
+# terminal 1: Gazebo (campo) + YOLO + nodos semánticos + RViz
+ros2 launch go2w_gazebo semantica.launch.py
+
+# terminal 2: EasyNav
+ros2 run easynav_system system_main --ros-args --params-file config/easynav_campo_sim.params.yaml
+
+# terminal 3: qué clases detecta el modelo en la simulación (cada 5 s)
+ros2 run go2w_perception class_stats
+```
+
+**1. Comprobar qué detecta el modelo.** Esto es lo primero: el modelo se entrenó con fotos reales y la simulación no lo es. Mueve el robot por el campo con `ros2 run teleop_twist_keyboard teleop_twist_keyboard` (con EasyNav parado, para que no se peleen por `/cmd_vel`) y mira la salida de `class_stats` y el panel YOLO de RViz. Si una clase no sale, mejora su aspecto en `scripts/generar_campo.py` (texturas y objetos) o baja `threshold` en `yolo_semantic_gazebo.yaml`.
+
+**2. Mapa semántico.** Al recorrer el campo aparecen los objetos en RViz. Para guardarlo y cargarlo después:
+
+```bash
+ros2 service call /semantic_mapper/save std_srvs/srv/Trigger     # -> /ws/maps/semantic_<fecha>.yaml
+ros2 launch go2w_gazebo semantica.launch.py semantic_map:=/ws/maps/semantic_<fecha>.yaml
+```
+
+**3. Ir a un objeto** (con EasyNav en marcha):
+
+```bash
+ros2 topic pub --once /semantic/goal_request std_msgs/msg/String "data: Post"     # el más cercano
+ros2 topic pub --once /semantic/goal_request std_msgs/msg/String "data: Trunk:12" # uno concreto
+ros2 topic echo /semantic/goal_status
+```
+
+**4. Seguir el surco.** Con el robot en la cabecera, mirando a un pasillo (el de salida, y=0.75):
+
+```bash
+ros2 topic pub --once /semantic/row_follow std_msgs/msg/Bool "data: true"
+ros2 topic echo /semantic/row_status
+```
+
+En RViz, **Eje del surco** muestra las detecciones de Row que usa (rojo) y el eje que calcula (verde).
+
+### Qué hay en el campo para el modelo
+
+`scripts/generar_campo.py` genera texturas procedurales en `models/campo_texturas/` (tierra, caballón, madera, corteza, hojas, charco, bache y rodada) y estos objetos:
+
+| Objeto | Dónde | Clase |
+|---|---|---|
+| Surcos con textura de tierra | y = -3 … 4.5, x 2..20 | Row |
+| Postes de madera de 1,2 m | 30 cm antes y después de cada surco; valla en y=6.5 | Post |
+| Frutales (tronco con corteza y copa) | y=-5.5, cada 3 m | Trunk |
+| Charcos | (8, -2.25), (-0.8, 2.6), (21.5, 0) | Puddle |
+| Baches | (12, -0.75), (0.2, -1.5), (22, 3) | Pothole |
+| Rodadas de tractor | pasillo y=2.25 y camino y=-4.4 | Trace |
+
+También escribe `maps/campo_flat.pcd`: el suelo plano del campo (x -10..32, y -12..14, z 0). Si cambias ese rectángulo, regenera el NavMap:
+
+```bash
+ros2 run navmap_tools pointcloud_to_navmap --input src/go2w_gazebo/maps/campo_flat.pcd \
+  --output src/go2w_gazebo/maps/campo_flat.navmap --resolution 0.25 --frame-id map
+```
+
+### Sin verificar todavía
+
+- Si el modelo detecta en Gazebo las texturas procedurales. Si no, hay que poner texturas más realistas o reentrenar con imágenes de la simulación.
+- Ajustes de EasyNav para pasillos de 1 m (`robot_geometry.radius` 0,3, `inflation_radius` 0,35, obstáculos a partir de 0,15 m). El lidar no ve los caballones de 12 cm hasta unos 2 m de distancia.
+- Que `map` coincida con el mundo de Gazebo (el NavMap plano está en coordenadas del mundo).
+
 ## Añadir objetos a la escena
 
 **Editando `worlds/objetos.sdf`.** Copia un bloque `<include>` y cambia el nombre, la posición y el modelo. No hace falta recompilar.
@@ -153,8 +252,15 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 | Archivo | Contenido |
 |---|---|
 | `worlds/objetos.sdf` | La escena: suelo, luz, objetos y la persona que camina |
-| `worlds/campo.sdf` | Campo de cultivo con surcos, plantas, árboles y la persona (generado) |
-| `scripts/generar_campo.py` | Genera `worlds/campo.sdf` |
+| `worlds/campo.sdf` | Campo de cultivo con surcos, plantas, árboles, postes, frutales, charcos, baches, rodadas y la persona (generado) |
+| `scripts/generar_campo.py` | Genera `worlds/campo.sdf`, `models/campo_texturas/*.png` y `maps/campo_flat.pcd` |
+| `models/campo_texturas/` | Texturas procedurales del campo (generadas) |
+| `maps/campo_flat.pcd`, `maps/campo_flat.navmap` | Suelo plano del campo para EasyNav |
+| `urdf/gazebo.xml` | Lo que `go2w_gis.launch.py` añade al URDF: lidar, IMU, GPS, RealSense, ruedas y odometría |
+| `config/yolo_semantic_gazebo.yaml` | `yolo_ros` con el modelo propio (`/ws/models/yolo26m_datasetFinal.onnx`) |
+| `launch/go2w_gis.launch.py` | Robot con lidar y RealSense en un mundo de `navmap_gis_tool` (`world_package:=`) o de `worlds/` (`world:=campo`) |
+| `launch/semantica.launch.py` | Campo + robot + YOLO propio + `semantic_mapper`, `semantic_goal`, `row_follower` + RViz |
+| `rviz/semantica.rviz` | NavMap, ruta, imagen de YOLO, mapa semántico y eje del surco |
 | `urdf/go2w_gazebo.urdf.xacro` | El Go2-W para Gazebo: patas sujetas, ruedas y RealSense |
 | `config/bridge.yaml` | Puente Gazebo ↔ ROS (`/clock`, `/cmd_vel`, `/odom`, `/tf`, `/joint_states`, cámara) con los mismos topics que la RealSense real |
 | `config/yolo_gazebo.yaml` | `yolo_ros` con la cámara simulada, tiempo simulado y posiciones 3D en `base_link` |
