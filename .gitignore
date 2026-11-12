@@ -13,5 +13,4 @@ config/ntrip.env
 mav.parm
 
 # modelos descargados por yolo_ros (cache_dir de los yaml)
-/models/
 bags/
