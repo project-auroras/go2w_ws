@@ -1,0 +1,47 @@
+# yolo_ros con la RealSense real del Go2-W y el modelo propio de navegación semántica
+# (semantic_live.launch.py). Igual que yolo_live.yaml pero con models/yolo26m_datasetFinal.onnx
+# (47 clases: Row, Trace, Trunk, Post, Pothole, Puddle, person, animales, frutas). El modelo no
+# está en git: copiarlo a models/ del repo en el equipo que ejecuta YOLO (/ws/models dentro).
+# La NX publica la imagen comprimida; el launch la descomprime en el portátil en
+# /camera_local/... y YOLO lee de ahí. Las posiciones 3D salen en base_link (la TF
+# base_link -> camera_link está en el URDF), así que la inclinación de 20 deg de la
+# cámara ya está corregida: x delante, y izquierda, z arriba.
+/yolo/yolo_node:
+  ros__parameters:
+    plugins: ["detection", "tracking", "detection3d", "debug"]
+    cameras: ["cam0"]
+    cam0:
+      rgb_topic: /camera_local/color/image_raw
+      depth_topic: /camera_local/aligned_depth/image_raw
+      depth_info_topic: /camera/camera/aligned_depth_to_color/camera_info
+      image_reliability: 1
+      depth_reliability: 1
+    detection:
+      plugin: yolo_ros/DetectionPlugin
+      model_path: /ws/models/yolo26m_datasetFinal.onnx
+      # bajo para la primera prueba: ver con class_stats qué puntuaciones da en el campo
+      threshold: 0.35
+      iou: 0.45
+      n_threads: -1
+      img_width: 640
+      img_height: 480
+      provider: cuda
+      cameras: ["cam0"]
+    tracking:
+      plugin: yolo_ros/TrackingPlugin
+      cameras: ["cam0"]
+      tracker_type: bytetrack
+      track_high_thresh: 0.25
+      track_low_thresh: 0.1
+      new_track_thresh: 0.25
+      track_buffer: 30
+      match_thresh: 0.8
+      fuse_score: true
+    detection3d:
+      plugin: yolo_ros/Detect3DPlugin
+      cameras: ["cam0"]
+      target_frame: base_link
+    debug:
+      plugin: yolo_ros/DebugPlugin
+      cameras: ["cam0"]
+      marker_lifetime: 0.5

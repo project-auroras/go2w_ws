@@ -250,6 +250,70 @@ Nodos para navegar con un modelo YOLO26 entrenado con clases propias (`models/yo
 
 Parámetros en `config/semantic_nav.yaml`. Cómo probarlo en Gazebo: [go2w_gazebo/README.md](../go2w_gazebo/README.md#navegación-semántica-modelo-propio--easynav).
 
+En Gazebo el modelo **no detecta nada**: la puntuación máxima en las imágenes simuladas es 0,008. Con fotos reales sí detecta (person 0,61), así que se prueba directamente en el robot.
+
+### En el robot real
+
+Mismo montaje que el sigue-personas (paso 9): la cámara y EasyNav en la NX, y YOLO y los nodos semánticos en el portátil, que recibe la imagen comprimida por WiFi. `map` es donde se encendió el robot (origen de FAST-LIO): `map → odom` es la identidad.
+
+**Preparación**
+
+- El modelo no está en git. Cópialo a `models/` del repo en el equipo que ejecuta YOLO: `scp yolo26m_datasetFinal.onnx <equipo>:~/go2w_ws/models/`.
+- En la NX y en el portátil hay que tener esta rama: EasyNav usa `config/easynav_real.params.yaml` y el mapa `go2w_bringup/maps/flat_40m.navmap`.
+- Portátil, dentro del contenedor: `colcon build --symlink-install --packages-select go2w_perception && source scripts/env.sh`.
+- La GPU del portátil (RTX 50xx, CUDA 13) va bien. En un PC con una GPU que CUDA 13 no soporta (por ejemplo una GTX 950), YOLO cae a CPU (~7 imágenes/s), que basta para ir a 0,3 m/s.
+
+**NX** (cada terminal con `export GO2_IFACE=enP8p1s0 && source scripts/env.sh`):
+
+```bash
+ros2 launch go2w_bringup go2w.launch.py                     # FAST-LIO /odom + /scan (robot quieto ~2 s al arrancar)
+ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true \
+  rgb_camera.color_profile:=640x480x15 depth_module.depth_profile:=640x480x15
+```
+
+**Paso 1: qué detecta el modelo en el campo (el robot no se mueve).** Es lo primero y decide todo lo demás.
+
+```bash
+ros2 launch go2w_perception semantic_live.launch.py map_tf:=true
+ros2 run go2w_perception class_stats                          # otra terminal: recuento por clase cada 5 s
+```
+
+Apunta la cámara a surcos, postes, troncos y rodadas, y mira el panel YOLO de RViz y las puntuaciones de `class_stats`. Si una clase sale con poca puntuación, ajusta `threshold` en `config/yolo_semantic_live.yaml` o `min_score` en `semantic_nav.yaml`. Si no sale ninguna clase útil, no sigas: hay que reentrenar con imágenes de este campo. Para eso puedes grabar un rosbag con `/camera/camera/color/image_raw/compressed` y sacar las imágenes de ahí.
+
+**Paso 2: mapa semántico, moviendo el robot con el mando** (sin EasyNav). Con el mismo launch (`map_tf:=true`), recorre el campo despacio. En RViz deben aparecer los objetos como cajas, con la etiqueta `Clase:id`, sin duplicarse al volver a pasar. Al terminar, guarda el mapa:
+
+```bash
+ros2 service call /semantic_mapper/save std_srvs/srv/Trigger    # -> /ws/maps/semantic_<fecha>.yaml
+```
+
+**Paso 3: EasyNav solo** (todavía sin probar en el robot). Para el launch del portátil (`map_tf:=true` y EasyNav publicarían los dos `map`). En la NX:
+
+```bash
+ros2 run easynav_system system_main --ros-args --params-file config/easynav_real.params.yaml
+```
+
+En el portátil, `ros2 launch go2w_perception semantic_live.launch.py`. Manda metas cortas (2–3 m) con "NavMap Goal Pose" en RViz. El robot va a 0,3 m/s como máximo. Comprueba que no aparece un obstáculo debajo del robot parado y que una persona delante sale como obstáculo.
+
+**Paso 4: ir a un objeto.** Con EasyNav y `semantic_live.launch.py` en marcha (el mapa del paso 2 solo sirve si no se ha reiniciado FAST-LIO, porque `map` cambia: `semantic_map:=/ws/maps/semantic_<fecha>.yaml`):
+
+```bash
+ros2 topic pub --once /semantic/goal_request std_msgs/msg/String "data: Post"
+ros2 topic echo /semantic/goal_status
+```
+
+**Paso 5: seguir el surco.** Mide antes la separación entre surcos y pon la mitad en `aisle_half_width` (`semantic_nav.yaml`). Con el robot al principio de un pasillo, mirando a lo largo:
+
+```bash
+ros2 topic pub --once /semantic/row_follow std_msgs/msg/Bool "data: true"
+ros2 topic echo /semantic/row_status          # RViz: "Eje del surco" (detecciones en rojo, eje en verde)
+```
+
+Seguridad:
+- Siempre alguien con el mando.
+- `go2w_driver` para el robot si deja de recibir `/cmd_vel` durante 0,5 s, así que si se corta el WiFi o EasyNav se detiene, el robot se para.
+- EasyNav solo ve obstáculos con el lidar (`/scan`). Los surcos bajos y los charcos no los ve, solo lo que esté por encima de ~0,25 m.
+- Para pararlo: Ctrl+C en `system_main`, o publica en `/semantic/row_follow` `"data: false"` y después una meta en el sitio.
+
 ## Problemas habituales
 
 | Síntoma | Solución |

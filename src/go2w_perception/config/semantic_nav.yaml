@@ -37,7 +37,9 @@ row_follower:
     window_s: 3.0           # s de detecciones que se usan
     max_ahead: 6.0          # m
     max_lateral: 2.0        # m
-    aisle_half_width: 0.75  # m del centro del surco al eje del pasillo (surcos cada 1.5 m)
+    # m del centro del surco al eje del pasillo: la mitad de la separación entre surcos
+    # (1.5 m en el campo de Gazebo). MEDIRLO en el campo real
+    aisle_half_width: 0.75
     min_spread: 1.0         # m en x para ajustar la pendiente de un surco
     max_slope: 0.4          # pendiente máxima del eje respecto al robot
     smoothing: 0.5          # 0: sin suavizar el eje entre ciclos
