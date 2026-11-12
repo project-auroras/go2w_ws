@@ -181,8 +181,9 @@ def generate_launch_description():
         Node(
             package='rviz2',
             executable='rviz2',
-            arguments=['-d', os.path.join(get_package_share_directory('go2w_bringup'),
-                                          'config', 'go2w.rviz')],
+            # Fixed Frame map: EasyNav goals must be in map (GoalManager does not transform them)
+            arguments=['-d', os.path.join(get_package_share_directory('go2w_gazebo'),
+                                          'rviz', 'go2w_sim.rviz')],
             parameters=[{'use_sim_time': True}],
             condition=IfCondition(LaunchConfiguration('rviz'))),
     ])

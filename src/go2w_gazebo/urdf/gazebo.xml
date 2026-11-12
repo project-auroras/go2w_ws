@@ -31,7 +31,9 @@
           </vertical>
         </scan>
         <range>
-          <min>0.15</min>
+          <!-- gpu_lidar sees the robot's own visuals up to ~0.3 m: those points made a
+               lethal obstacle under the robot and EasyNav's A* could not plan from it -->
+          <min>0.4</min>
           <max>30.0</max>
         </range>
       </lidar>

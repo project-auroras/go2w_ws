@@ -7,11 +7,9 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 | `go2w_description` | URDF y mallas del Go2-W (de `unitreerobotics/unitree_ros`), con raíz `base_link` y frame `utlidar_lidar` |
 | `go2w_driver` | `sim_go2w` para trabajar sin robot (`sim:=true`). `lowstate` → `/joint_states`, `/imu`, `/battery_state`; `/odom` y TF `odom → base_footprint → base_link` desde FAST-LIO (`odom_source: lio`, por defecto), las ruedas (`wheels`, en `sim:=true`) o `sportmodestate`; `/cmd_vel` → `/api/sport/request` (Move) con watchdog; servicio `/mode` |
 | `go2w_bringup` | Lanza description + driver + FAST-LIO (`lio:=true`) + `/utlidar/cloud` → `/scan` + RViz |
-| `go2w_gazebo` | Go2-W en Gazebo Harmonic sobre mundos de `navmap_gis_tool` |
+| `go2w_gazebo` | Go2-W en Gazebo Harmonic sobre mundos de `navmap_gis_tool` o el campo de cultivo; escena de objetos y sigue-personas con RealSense simulada. Ver [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md) |
 | `worlds/gis_*` | Mundos generados con `navmap_gis_tool` (`gis_mic_recinto_world`: recinto del MIC, León) |
-| `go2w_nav_test` | `waypoint_follower`: recorre waypoints con `/odom` → `/cmd_vel` y se para si `/scan` ve algo delante. Para probar el robot |
-| `go2w_perception` | Detección de personas con YOLO26 (`yolo_ros`) en la RealSense: `people_bag.launch.py` alinea la profundidad del rosbag al color, lanza `yolo_node` (detección + tracking + 3D) y `person_filter` publica solo las personas en `/people` |
-| `go2w_gazebo` | Simulación en Gazebo Fortress: escena con objetos y una persona que camina, el Go2-W con RealSense simulada, YOLO26 y sigue-personas. Ver [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md) |
+| `go2w_perception` | Detección de personas con YOLO26 (`yolo_ros`) en la RealSense: `people_bag.launch.py` alinea la profundidad del rosbag al color, lanza `yolo_node` (detección + tracking + 3D) y `person_filter` publica solo las personas en `/people`; sigue-personas (`person_follower`) y navegación semántica (`semantic_mapper`, `semantic_goal`, `row_follower`) |
 
 Dependencias externas, en `deps.repos` con commits fijos. `scripts/install_deps.sh ws` las clona en `src/external/` (no versionado); para actualizar una, cambiar su `version` en `deps.repos` y volver a ejecutarlo:
 
@@ -140,19 +138,6 @@ ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angula
 ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_down'"
 ```
 
-### Prueba de navegación (`go2w_nav_test`)
-
-Recorre los `waypoints` de `go2w_nav_test/config/waypoint_follower.yaml` (por defecto un cuadrado de 1 m a la izquierda), relativos a donde está el robot al arrancar el nodo. Va a 0.3 m/s y 0.5 rad/s como máximo. Se para mientras haya algo a menos de `stop_distance` (0.5 m) delante en `/scan`, y si dejan de llegar `/odom` o `/scan`. Termina al llegar al último waypoint; Ctrl+C lo para (el watchdog del driver detiene el robot en 0.5 s).
-
-```bash
-ros2 launch go2w_bringup go2w.launch.py                         # con el robot (publica /scan)
-ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_up'"
-ros2 launch go2w_nav_test waypoint_follower.launch.py
-
-ros2 launch go2w_bringup go2w.launch.py sim:=true               # en simulación (sin /scan)
-ros2 launch go2w_nav_test waypoint_follower.launch.py   # con use_scan: false en el yaml
-```
-
 ### Detección de personas (YOLO26, `go2w_perception`)
 
 `yolo_ros` es C++ con ONNX Runtime; el modelo (`yolo26s.onnx`) se descarga solo de Hugging Face (`unileon-robotics/YOLO26-ONNX`) la primera vez. La imagen Docker trae CUDA 13 + cuDNN 9 (la RTX 50xx necesita CUDA 13), pero `yolo_onnxruntime_vendor` compila para CPU salvo que se le pida GPU:
@@ -186,7 +171,6 @@ ros2 topic echo /people           # yolo_msgs/DetectionArray, bbox3d.center = x 
 Guía completa en [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md). En resumen, dentro del contenedor:
 
 ```bash
-scripts/install_deps.sh ws                                     # instala Gazebo Fortress (ros_gz)
 colcon build --symlink-install --packages-select go2w_gazebo
 source scripts/env.sh
 ros2 launch go2w_gazebo simulacion.launch.py                       # detección de objetos
@@ -202,6 +186,19 @@ Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con 
 3. ~~**Move en modo ruedas**~~ Verificado (2026-11-06): el Go2-W acepta la API 1008 (Move) como el Go2. Hace falta `ROS_DOMAIN_ID=0` (el software de Unitree está en el dominio 0) y `balance_stand` antes de moverlo: `stand_up` lo deja bloqueado.
 4. **QoS**: si algún topic de Unitree no llega, revisar `ros2 topic info -v`.
 
-## Siguiente paso: EasyNav
+## Gazebo + EasyNav
+
+`go2w_gazebo` mete el Go2-W en un mundo de `src/worlds/` con física: patas fijas de pie, ruedas como skid steer en `/cmd_vel`, LiDAR de 16 canales (`/utlidar/cloud` → `/scan`), IMU, GPS (`/gps/fix`) y `/odom` perfecta. Los topics son los del robot real.
+
+```bash
+# terminal 1: simulación + RViz (Fixed Frame map, NavMap y ruta del planificador)
+ros2 launch go2w_gazebo go2w_gis.launch.py world_package:=gis_mic_recinto_world rviz:=true
+#   opcional: gui:=false (Gazebo sin ventana), x:= y:= yaw:= (posición inicial)
+
+# terminal 2: EasyNav
+ros2 run easynav_system system_main --ros-args --params-file config/easynav_gis_sim.params.yaml
+```
+
+Goals desde RViz con **NavMap Goal Pose** (tecla `g`): pone el goal sobre el terreno, con su altura. Los goals tienen que ir en frame `map`. Otro mundo: cambiar `package` y `navmap_path_file` en `config/easynav_gis_sim.params.yaml`.
 
 EasyNav 0.5.0 (EasyNavigation, easynav_plugins, NavMap, yaets) se clona en `src/external/` desde `deps.repos`; se compila con el resto del workspace.
