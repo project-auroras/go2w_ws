@@ -4,6 +4,7 @@ from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -23,7 +24,9 @@ def generate_launch_description():
                               description='true: el robot sigue a la persona (se MUEVE)'),
         DeclareLaunchArgument('max_linear', default_value='0.6',
                               description='m/s máximos del sigue-personas'),
-        DeclareLaunchArgument('max_angular', default_value='0.8',
+        DeclareLaunchArgument('obstacle_avoidance', default_value='true',
+                              description='false: no frena ante obstáculos (sin /scan)'),
+        DeclareLaunchArgument('max_angular', default_value='1.2',
                               description='rad/s máximos del sigue-personas'),
 
         # JPEG -> imagen (color)
@@ -55,7 +58,9 @@ def generate_launch_description():
             package='go2w_perception', executable='person_follower', output='screen',
             parameters=[PathJoinSubstitution([pkg, 'config', 'person_follower.yaml']),
                         {'max_linear': LaunchConfiguration('max_linear'),
-                         'max_angular': LaunchConfiguration('max_angular')}],
+                         'max_angular': LaunchConfiguration('max_angular'),
+                         'obstacle_avoidance': ParameterValue(
+                             LaunchConfiguration('obstacle_avoidance'), value_type=bool)}],
             condition=IfCondition(LaunchConfiguration('follower')),
         ),
     ])

@@ -1,11 +1,15 @@
 import math
 import random
+from collections import deque
+
+import numpy as np
 
 import rclpy
 from geometry_msgs.msg import Point
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.time import Time
+from sensor_msgs.msg import LaserScan
 from tf2_ros import Buffer, TransformException, TransformListener
 from visualization_msgs.msg import Marker, MarkerArray
 from yolo_msgs.msg import Detection, DetectionArray
@@ -69,7 +73,12 @@ class FakePerson(Node):
 
     Las personas andan en el frame world_frame. En cada ciclo se pasan al frame de
     la cámara con la TF y solo se publican si caen dentro del campo de visión de la
-    RealSense, con ruido y fallos de detección. También publica markers para RViz.
+    RealSense, con ruido y fallos de detección, y si no las tapa un obstáculo. También
+    publica markers para RViz.
+
+    Con publish_scan publica un /scan (LaserScan en base_link, 360 deg) que ve los
+    obstáculos (columnas de obstacles) y las personas con la estela de los últimos
+    scan_window s, como el /scan de lio_scan en el robot real (junta 1 s de nubes).
     """
 
     def __init__(self):
@@ -95,10 +104,21 @@ class FakePerson(Node):
         profile = [v for v in profile if v > 0.0]
         # como ByteTrack con la cámara real: nuevo ID al volver a entrar en la imagen
         self.new_id_on_reappear = p('new_id_on_reappear', True).value
+        # retraso de /people como WiFi + YOLO; el stamp es el de cuando se "tomó la imagen"
+        self.latency = p('latency', 0.0).value
+        self.pending = deque()
         self.next_track_id = 100
         self.track_ids = {}
         self.was_visible = set()
         self.fx, self.cx, self.cy = 615.0, 320.0, 240.0  # intrínsecos aprox. RealSense 640x480
+
+        # obstáculos: columnas [x, y, radio, ...] en world_frame
+        flat = p('obstacles', [0.0]).value
+        self.obstacles = [tuple(flat[i:i + 3]) for i in range(0, len(flat) - 2, 3)]
+        publish_scan = p('publish_scan', False).value
+        self.scan_window = p('scan_window', 1.0).value
+        self.person_radius = p('person_radius', 0.25).value
+        self.base_frame = p('base_frame', 'base_link').value
 
         self.walkers = [Walker('1', pairs(path1), speed, pause, profile)]
         if len(path2) >= 2:
@@ -110,12 +130,69 @@ class FakePerson(Node):
         self.marker_pub = self.create_publisher(MarkerArray, '/fake_people/markers', 10)
         self.dt = 1.0 / rate
         self.create_timer(self.dt, self.step)
+        self.history = deque()          # (t, [(x, y) de cada persona]) para la estela del scan
+        if publish_scan:
+            self.scan_pub = self.create_publisher(
+                LaserScan, p('scan_topic', '/scan').value, 10)
+            self.create_timer(1.0 / p('scan_rate', 10.0).value, self.publish_scan)
         self.get_logger().info(
-            f'{len(self.walkers)} persona(s) en {self.world_frame} -> {output_topic}')
+            f'{len(self.walkers)} persona(s) y {len(self.obstacles)} obstáculo(s) en '
+            f'{self.world_frame} -> {output_topic}' + (' + /scan' if publish_scan else ''))
+
+    def occluded(self, q, t, x, z):
+        """True si un obstáculo tapa el punto (x, z) del plano de la cámara."""
+        for ox, oy, r in self.obstacles:
+            cx, _, cz = rotate(q, (ox, oy, self.height / 2.0))
+            cx, cz = cx + t.x, cz + t.z
+            seg = x * x + z * z
+            u = max(0.0, min(1.0, (cx * x + cz * z) / seg)) if seg > 0.0 else 0.0
+            if math.hypot(cx - u * x, cz - u * z) < r and u * math.sqrt(seg) < math.sqrt(seg):
+                return True
+        return False
+
+    def publish_scan(self):
+        try:
+            tf = self.tf_buffer.lookup_transform(
+                self.base_frame, self.world_frame, Time(), timeout=Duration(seconds=0.0))
+        except TransformException:
+            return
+        r = tf.transform.rotation
+        yaw = math.atan2(2.0 * (r.w * r.z + r.x * r.y), 1.0 - 2.0 * (r.y * r.y + r.z * r.z))
+        c, s = math.cos(yaw), math.sin(yaw)
+        tx, ty = tf.transform.translation.x, tf.transform.translation.y
+        circles = list(self.obstacles)
+        for _, positions in self.history:
+            circles += [(x, y, self.person_radius) for x, y in positions]
+        scan = LaserScan()
+        scan.header.stamp = self.get_clock().now().to_msg()
+        scan.header.frame_id = self.base_frame
+        scan.angle_min, scan.angle_max = -math.pi, math.pi
+        scan.angle_increment = 0.0087
+        scan.range_min, scan.range_max = 0.15, 15.0
+        n = int(round((scan.angle_max - scan.angle_min) / scan.angle_increment))
+        ranges = np.full(n, np.inf)
+        if circles:
+            arr = np.array(circles)
+            # centros en base_link
+            cxb = c * arr[:, 0] - s * arr[:, 1] + tx
+            cyb = s * arr[:, 0] + c * arr[:, 1] + ty
+            ang = scan.angle_min + scan.angle_increment * np.arange(n)
+            dx, dy = np.cos(ang)[:, None], np.sin(ang)[:, None]
+            b = dx * cxb[None, :] + dy * cyb[None, :]
+            disc = b * b - (cxb ** 2 + cyb ** 2 - arr[:, 2] ** 2)[None, :]
+            hit = b - np.sqrt(np.maximum(disc, 0.0))
+            hit[(disc < 0.0) | (hit <= scan.range_min)] = np.inf
+            ranges = hit.min(axis=1)
+        scan.ranges = ranges.astype(np.float32).tolist()
+        self.scan_pub.publish(scan)
 
     def step(self):
         for w in self.walkers:
             w.step(self.dt)
+        now = self.get_clock().now().nanoseconds * 1e-9
+        self.history.append((now, [(w.x, w.y) for w in self.walkers]))
+        while self.history and now - self.history[0][0] > self.scan_window:
+            self.history.popleft()
 
         try:
             tf = self.tf_buffer.lookup_transform(
@@ -141,6 +218,8 @@ class FakePerson(Node):
                 continue
             if abs(math.atan2(x, z)) > self.hfov / 2.0:
                 continue
+            if self.occluded(q, t, x, z):
+                continue
             visible.add(w.id)
             if random.random() < self.dropout:
                 continue
@@ -150,7 +229,11 @@ class FakePerson(Node):
             out.detections.append(self.make_detection(self.track_id(w.id), x, y, z))
 
         self.was_visible = visible
-        self.pub.publish(out)
+        self.pending.append(out)
+        now_ns = self.get_clock().now().nanoseconds
+        while self.pending and now_ns - Time.from_msg(self.pending[0].header.stamp).nanoseconds \
+                >= self.latency * 1e9:
+            self.pub.publish(self.pending.popleft())
         self.publish_markers(visible)
 
     def track_id(self, person_id):
@@ -213,6 +296,22 @@ class FakePerson(Node):
             label.color.r = label.color.g = label.color.b = label.color.a = 1.0
             label.text = f'persona {w.id}' + ('' if w.id in visible else ' (fuera de vista)')
             markers.markers += [body, label]
+
+        for i, (ox, oy, r) in enumerate(self.obstacles):
+            obs = Marker()
+            obs.header.frame_id = self.world_frame
+            obs.header.stamp = stamp
+            obs.ns = 'obstacle'
+            obs.id = i
+            obs.type = Marker.CYLINDER
+            obs.pose.position.x, obs.pose.position.y = ox, oy
+            obs.pose.position.z = 0.5
+            obs.pose.orientation.w = 1.0
+            obs.scale.x = obs.scale.y = 2.0 * r
+            obs.scale.z = 1.0
+            obs.color.r = obs.color.g = obs.color.b = 0.5
+            obs.color.a = 1.0
+            markers.markers.append(obs)
 
         # campo de visión de la cámara, en el plano horizontal
         fov = Marker()

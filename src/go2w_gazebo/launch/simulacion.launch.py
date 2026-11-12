@@ -53,8 +53,9 @@ def generate_launch_description():
              parameters=[sim_time], output='screen'),
 
         Node(package='go2w_perception', executable='person_follower',
+             # sin /scan en esta escena: sin evitación de obstáculos
              parameters=[PathJoinSubstitution([perception, 'config', 'person_follower.yaml']),
-                         sim_time],
+                         sim_time, {'obstacle_avoidance': False}],
              output='screen',
              condition=IfCondition(LaunchConfiguration('follower'))),
 

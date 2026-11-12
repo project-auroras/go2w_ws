@@ -11,6 +11,7 @@
   <depend>yolo_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
   <depend>visualization_msgs</depend>
 
   <exec_depend>go2w_bringup</exec_depend>
