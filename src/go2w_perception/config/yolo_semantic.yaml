@@ -1,16 +1,16 @@
-# yolo_ros con la RealSense real del Go2-W y el modelo propio de navegación semántica
-# (semantic_live.launch.py). Igual que yolo_live.yaml pero con models/yolo26m_datasetFinal.onnx
+# yolo_ros con la RealSense del Go2-W y el modelo propio de navegación semántica
+# (semantic.launch.py). Igual que yolo_people.yaml pero con models/yolo26m_datasetFinal.onnx
 # (47 clases: Row, Trace, Trunk, Post, Pothole, Puddle, person, animales, frutas). El modelo no
-# está en git: copiarlo a models/ del repo en el equipo que ejecuta YOLO (/ws/models dentro).
-# La NX publica la imagen comprimida; el launch la descomprime en el portátil en
-# /camera_local/... y YOLO lee de ahí. Las posiciones 3D salen en base_link (la TF
-# base_link -> camera_link está en el URDF), así que la inclinación de 20 deg de la
-# cámara ya está corregida: x delante, y izquierda, z arriba.
+# está en git: copiarlo a models/ del repo en el equipo que ejecuta YOLO.
+# Las posiciones 3D salen en base_link: x delante, y izquierda, z arriba.
 /yolo/yolo_node:
   ros__parameters:
     plugins: ["detection", "tracking", "detection3d", "debug"]
     cameras: ["cam0"]
     cam0:
+      # rgb_topic, depth_topic, depth_info_topic y detection3d.target_frame los fija el
+      # launch según source:=camera|wifi|bag (go2w_perception/camera_source.py).
+      # Aquí quedan los de source:=camera.
       rgb_topic: /camera/camera/color/image_raw
       depth_topic: /camera/camera/aligned_depth_to_color/image_raw
       depth_info_topic: /camera/camera/aligned_depth_to_color/camera_info

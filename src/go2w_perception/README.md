@@ -25,13 +25,12 @@ rosbag (RealSense)
 
 | Archivo | Contenido |
 |---|---|
-| `launch/people_bag.launch.py` | TF estático depth→color, `RegisterNode`, `yolo_bringup/yolo.launch.py` con nuestro yaml y `person_filter` |
+| `launch/people.launch.py` | `yolo_node` + `person_filter` (+ `person_follower` con `follower:=true`). `source:=camera` (YOLO en la NX, por defecto), `wifi` (YOLO en el portátil) o `bag` (rosbags de octubre) |
+| `go2w_perception/camera_source.py` | Parte común de `people` y `semantic`: según `source`, arranca la descompresión (`wifi`) o el TF depth→color + `RegisterNode` (`bag`) y fija los topics y el `target_frame` de `yolo_node` |
 | `config/yolo_people.yaml` | `yolo26s.onnx`, `provider: cuda`, plugins detection + tracking + detection3d + debug |
 | `go2w_perception/person_filter.py` | Republica solo la clase `person` (desde la versión 5.0, `yolo_ros` no filtra por clase) |
 | `go2w_perception/person_follower.py` | `/people` → `/cmd_vel`: sigue a una persona por su ID de tracking |
 | `go2w_perception/fake_person.py` | Personas virtuales que publican `/people` para simular sin cámara |
-| `launch/people_live.launch.py` | RealSense real (en la NX) → descompresión + YOLO + `person_filter` (+ `person_follower` con `follower:=true`) en el portátil |
-| `config/yolo_live.yaml` | `yolo_ros` con la cámara real, posiciones 3D en `base_link` |
 | `launch/person_follower_sim.launch.py` | `sim_go2w` + TF de la cámara + `fake_person` + `person_follower` + RViz |
 | `config/person_follower.yaml` | Parámetros de `person_follower` y `fake_person` |
 
@@ -82,7 +81,7 @@ Cada `docker compose run --rm` crea un contenedor nuevo y pierde lo instalado co
 ```bash
 scripts/install_deps.sh ws         # instala depth_image_proc
 source scripts/env.sh
-ros2 launch go2w_perception people_bag.launch.py
+ros2 launch go2w_perception people.launch.py source:=bag
 ```
 
 La primera vez, el modelo `yolo26s.onnx` se descarga de Hugging Face (`unileon-robotics/YOLO26-ONNX`).
@@ -180,11 +179,11 @@ ros2 run go2w_perception person_follower --ros-args \
 ros2 topic echo /cmd_vel
 ```
 
-Probar `person_follower` con el rosbag real, sin robot: lanza `people_bag.launch.py` + `ros2 bag play ...` (pasos 4 y 5), luego `ros2 run go2w_perception person_follower` y mira `ros2 topic echo /cmd_vel`.
+Probar `person_follower` con el rosbag real, sin robot: lanza `people.launch.py source:=bag` + `ros2 bag play ...` (pasos 4 y 5), luego `ros2 run go2w_perception person_follower` y mira `ros2 topic echo /cmd_vel`.
 
-## 9. Con la RealSense real (YOLO en el portátil)
+## 9. Con la RealSense real
 
-La cámara va por USB a la NX y YOLO corre en el portátil, con su GPU. La NX manda la imagen comprimida por WiFi (color en JPEG y profundidad en PNG sin pérdida); `people_live.launch.py` la descomprime, lanza YOLO y publica las personas en `/people`. Las posiciones salen en **`base_link`** (x delante, y izquierda), con la posición e inclinación de la cámara del URDF.
+La cámara va por USB a la NX. YOLO puede correr en la misma NX (`source:=camera`, por defecto), que lee la imagen directamente, o en el portátil con su GPU (`source:=wifi`): la NX manda la imagen comprimida por WiFi (color en JPEG y profundidad en PNG sin pérdida) y el launch la descomprime en `/camera_local/...`. En los dos casos `people.launch.py` lanza YOLO y publica las personas en `/people`. Las posiciones salen en **`base_link`** (x delante, y izquierda), con la posición e inclinación de la cámara del URDF.
 
 Red: el portátil está en la red del robot por WiFi (`wlo1`, `192.168.123.103`) y la NX por cable (`enP8p1s0`, `192.168.123.18`).
 
@@ -207,13 +206,15 @@ docker compose -f docker/compose.yaml run --rm --name go2w-cam go2w
 scripts/install_deps.sh ws            # image_transport (compressed / compressedDepth) y rqt_image_view
 colcon build --symlink-install --packages-select go2w_perception
 source scripts/env.sh
-ros2 launch go2w_perception people_live.launch.py
+ros2 launch go2w_perception people.launch.py source:=wifi
 ```
+
+Para ejecutarlo en la NX, sin el portátil: `ros2 launch go2w_perception people.launch.py` (en la NX, `onnxruntime` todavía no usa la GPU: YOLO va en CPU).
 
 Comprobar (otra terminal: `docker exec -it go2w-cam bash` y `source scripts/env.sh`):
 
 ```bash
-ros2 topic hz /camera_local/color/image_raw            # imagen descomprimida (~15 Hz)
+ros2 topic hz /camera_local/color/image_raw            # source:=wifi: imagen descomprimida (~15 Hz)
 ros2 topic hz /camera_local/aligned_depth/image_raw
 ros2 run rqt_image_view rqt_image_view /yolo/cam0/debug_image
 ros2 topic echo /people --field detections             # bbox3d.center.position en base_link
@@ -222,13 +223,13 @@ ros2 topic echo /people --field detections             # bbox3d.center.position 
 Sigue-personas (**el robot se mueve**: zona despejada y alguien con el mando):
 
 ```bash
-ros2 launch go2w_perception people_live.launch.py follower:=true            # 0.6 m/s, 0.8 rad/s
-ros2 launch go2w_perception people_live.launch.py follower:=true max_linear:=0.2
+ros2 launch go2w_perception people.launch.py source:=wifi follower:=true            # 0.6 m/s, 0.8 rad/s
+ros2 launch go2w_perception people.launch.py source:=wifi follower:=true max_linear:=0.2
 ```
 
 - Antes de `follower:=true`, mira con `follower:=false` y `ros2 run go2w_perception person_follower` + `ros2 topic echo /cmd_vel` que las órdenes tienen sentido (persona a la derecha → `angular.z` negativo).
 - `go2w_driver` para el robot si no recibe `/cmd_vel` en 0,5 s: si el WiFi se corta, se para.
-- Para seguir a alguien andando a paso normal (1,2–1,4 m/s) hace falta `max_linear` de ~1,6 (el de `person_follower.yaml`; `go2w_driver` también recorta a `max_vx`, 1,6). Por seguridad, `people_live.launch.py` lo deja en 0,6 por defecto: súbelo poco a poco (`max_linear:=1.0`, luego `1.6`) en una zona amplia.
+- Para seguir a alguien andando a paso normal (1,2–1,4 m/s) hace falta `max_linear` de ~1,6 (el de `person_follower.yaml`; `go2w_driver` también recorta a `max_vx`, 1,6). Por seguridad, `people.launch.py` lo deja en 0,6 por defecto: súbelo poco a poco (`max_linear:=1.0`, luego `1.6`) en una zona amplia.
 - **No frena ante obstáculos**: solo sigue a la persona. Zona despejada y alguien con el mando.
 - Si la persona se acerca a menos de `backoff_distance` (1,3 m del centro, ~1 m del morro), retrocede a `max_backward` (0,3 m/s) sin dejar de mirarla. Detrás no hay cámara: hace falta espacio libre detrás del robot.
 - Con la cámara real, ByteTrack cambia a menudo el ID de la persona (de cerca, o cuando llegan frames a saltos por el WiFi). Por eso `person_follower`:
@@ -254,7 +255,7 @@ En Gazebo el modelo **no detecta nada**: la puntuación máxima en las imágenes
 
 ### En el robot real
 
-Mismo montaje que el sigue-personas (paso 9): la cámara y EasyNav en la NX, y YOLO y los nodos semánticos en el portátil, que recibe la imagen comprimida por WiFi. `map` es donde se encendió el robot (origen de FAST-LIO): `map → odom` es la identidad.
+Mismo montaje que el sigue-personas (paso 9): la cámara y EasyNav en la NX. YOLO y los nodos semánticos corren por defecto en la NX (`source:=camera`); con `source:=wifi` corren en el portátil, que recibe la imagen comprimida por WiFi. `map` es donde se encendió el robot (origen de FAST-LIO): `map → odom` es la identidad.
 
 **Preparación**
 
@@ -274,11 +275,11 @@ ros2 launch realsense2_camera rs_launch.py align_depth.enable:=true \
 **Paso 1: qué detecta el modelo en el campo (el robot no se mueve).** Es lo primero y decide todo lo demás.
 
 ```bash
-ros2 launch go2w_perception semantic_live.launch.py map_tf:=true
+ros2 launch go2w_perception semantic.launch.py map_tf:=true
 ros2 run go2w_perception class_stats                          # otra terminal: recuento por clase cada 5 s
 ```
 
-Apunta la cámara a surcos, postes, troncos y rodadas, y mira el panel YOLO de RViz y las puntuaciones de `class_stats`. Si una clase sale con poca puntuación, ajusta `threshold` en `config/yolo_semantic_live.yaml` o `min_score` en `semantic_nav.yaml`. Si no sale ninguna clase útil, no sigas: hay que reentrenar con imágenes de este campo. Para eso puedes grabar un rosbag con `/camera/camera/color/image_raw/compressed` y sacar las imágenes de ahí.
+Apunta la cámara a surcos, postes, troncos y rodadas, y mira el panel YOLO de RViz y las puntuaciones de `class_stats`. Si una clase sale con poca puntuación, ajusta `threshold` en `config/yolo_semantic.yaml` o `min_score` en `semantic_nav.yaml`. Si no sale ninguna clase útil, no sigas: hay que reentrenar con imágenes de este campo. Para eso puedes grabar un rosbag con `/camera/camera/color/image_raw/compressed` y sacar las imágenes de ahí.
 
 **Paso 2: mapa semántico, moviendo el robot con el mando** (sin EasyNav). Con el mismo launch (`map_tf:=true`), recorre el campo despacio. En RViz deben aparecer los objetos como cajas, con la etiqueta `Clase:id`, sin duplicarse al volver a pasar. Al terminar, guarda el mapa:
 
@@ -292,9 +293,9 @@ ros2 service call /semantic_mapper/save std_srvs/srv/Trigger    # -> /ws/maps/se
 ros2 run easynav_system system_main --ros-args --params-file config/easynav_real.params.yaml
 ```
 
-En el portátil, `ros2 launch go2w_perception semantic_live.launch.py`. Manda metas cortas (2–3 m) con "NavMap Goal Pose" en RViz. El robot va a 0,3 m/s como máximo. Comprueba que no aparece un obstáculo debajo del robot parado y que una persona delante sale como obstáculo.
+En el portátil, `ros2 launch go2w_perception semantic.launch.py`. Manda metas cortas (2–3 m) con "NavMap Goal Pose" en RViz. El robot va a 0,3 m/s como máximo. Comprueba que no aparece un obstáculo debajo del robot parado y que una persona delante sale como obstáculo.
 
-**Paso 4: ir a un objeto.** Con EasyNav y `semantic_live.launch.py` en marcha (el mapa del paso 2 solo sirve si no se ha reiniciado FAST-LIO, porque `map` cambia: `semantic_map:=/ws/maps/semantic_<fecha>.yaml`):
+**Paso 4: ir a un objeto.** Con EasyNav y `semantic.launch.py` en marcha (el mapa del paso 2 solo sirve si no se ha reiniciado FAST-LIO, porque `map` cambia: `semantic_map:=/ws/maps/semantic_<fecha>.yaml`):
 
 ```bash
 ros2 topic pub --once /semantic/goal_request std_msgs/msg/String "data: Post"
@@ -326,7 +327,7 @@ Seguridad:
 
 ## Notas
 
-- Los rosbags no tienen `/tf_static`. Los extrínsecos depth→color de la RealSense se leyeron del topic `/camera/camera/extrinsics/depth_to_color` del bag y están fijos en `people_bag.launch.py`.
+- Los rosbags no tienen `/tf_static`. Los extrínsecos depth→color de la RealSense se leyeron del topic `/camera/camera/extrinsics/depth_to_color` del bag y están fijos en `go2w_perception/camera_source.py`.
 - Con la cámara real no hace falta `RegisterNode`: basta con lanzar `realsense2_camera` con `align_depth.enable:=true` y usar `aligned_depth_to_color/image_raw`.
 - Las posiciones 3D están en el frame de la cámara: los rosbags de octubre no tienen TF. La posición de la cámara en el robot (`base_link → camera_link`) ya está en el URDF de `go2w_description`, así que con la cámara real se puede poner `target_frame: base_link`.
 - `src/yolo_ros` es código de terceros (v5.0.0) y no se modifica.

@@ -1,15 +1,20 @@
-# yolo_ros pipeline for the RealSense on the Go2-W: YOLO26 detection +
-# ByteTrack + 3D from the depth aligned to color. Based on
-# yolo_bringup/config/yolo.yaml. The block key must match the launch
-# namespace ("yolo").
+# yolo_ros para detectar personas con la RealSense del Go2-W (people.launch.py): YOLO26s
+# (Hugging Face) + ByteTrack + 3D con la profundidad alineada al color. Basado en
+# yolo_bringup/config/yolo.yaml. La clave del bloque tiene que coincidir con el namespace
+# del launch ("yolo"). Con la cámara real, las posiciones 3D salen en base_link (la TF
+# base_link -> camera_link está en el URDF, con la inclinación de 20 deg): x delante,
+# y izquierda, z arriba. Con source:=bag salen en el frame óptico (esos bags no tienen TF).
 /yolo/yolo_node:
   ros__parameters:
     plugins: ["detection", "tracking", "detection3d", "debug"]
     cameras: ["cam0"]
     cam0:
+      # rgb_topic, depth_topic, depth_info_topic y detection3d.target_frame los fija el
+      # launch según source:=camera|wifi|bag (go2w_perception/camera_source.py).
+      # Aquí quedan los de source:=camera.
       rgb_topic: /camera/camera/color/image_raw
-      depth_topic: /camera/camera/aligned_depth/image
-      depth_info_topic: /camera/camera/aligned_depth/camera_info
+      depth_topic: /camera/camera/aligned_depth_to_color/image_raw
+      depth_info_topic: /camera/camera/aligned_depth_to_color/camera_info
       image_reliability: 1
       depth_reliability: 1
     detection:
@@ -38,7 +43,7 @@
     detection3d:
       plugin: yolo_ros/Detect3DPlugin
       cameras: ["cam0"]
-      target_frame: camera_color_optical_frame   # the bags have no TF to base_link
+      target_frame: base_link
     debug:
       plugin: yolo_ros/DebugPlugin
       cameras: ["cam0"]

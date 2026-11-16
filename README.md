@@ -9,7 +9,7 @@ Workspace ROS 2 Humble para el Unitree Go2-W (ruedas). Convierte los mensajes de
 | `go2w_bringup` | Lanza description + driver + FAST-LIO (`lio:=true`) + `/utlidar/cloud` → `/scan` + RViz |
 | `go2w_gazebo` | Go2-W en Gazebo Harmonic sobre mundos de `navmap_gis_tool` o el campo de cultivo; escena de objetos y sigue-personas con RealSense simulada. Ver [src/go2w_gazebo/README.md](src/go2w_gazebo/README.md) |
 | `worlds/gis_*` | Mundos generados con `navmap_gis_tool` (`gis_mic_recinto_world`: recinto del MIC, León) |
-| `go2w_perception` | Detección de personas con YOLO26 (`yolo_ros`) en la RealSense: `people_bag.launch.py` alinea la profundidad del rosbag al color, lanza `yolo_node` (detección + tracking + 3D) y `person_filter` publica solo las personas en `/people`; sigue-personas (`person_follower`) y navegación semántica (`semantic_mapper`, `semantic_goal`, `row_follower`) |
+| `go2w_perception` | Detección de personas con YOLO26 (`yolo_ros`) en la RealSense: `people.launch.py` lanza `yolo_node` con la cámara de la NX, por WiFi o un rosbag (`source:=camera|wifi|bag`) (detección + tracking + 3D) y `person_filter` publica solo las personas en `/people`; sigue-personas (`person_follower`) y navegación semántica (`semantic_mapper`, `semantic_goal`, `row_follower`) |
 
 Dependencias externas, en `deps.repos` con commits fijos. `scripts/install_deps.sh ws` las clona en `src/external/` (no versionado); para actualizar una, cambiar su `version` en `deps.repos` y volver a ejecutarlo:
 
@@ -153,7 +153,7 @@ source scripts/env.sh
 Los rosbags se montan en `/bags` desde `~/rosbags` del host (otra carpeta con `BAGS_DIR=...`). Con el rosbag de la RealSense:
 
 ```bash
-ros2 launch go2w_perception people_bag.launch.py
+ros2 launch go2w_perception people.launch.py source:=bag
 ros2 bag play /bags/rosbag2_2026_10_28-10_44_19 --loop \
   --topics /camera/camera/color/image_raw /camera/camera/color/camera_info \
            /camera/camera/depth/image_rect_raw /camera/camera/depth/camera_info
@@ -162,7 +162,7 @@ ros2 topic echo /people           # yolo_msgs/DetectionArray, bbox3d.center = x 
 ```
 
 - El log de `yolo_node` debe decir `Using execution provider: cuda`; si dice `cpu`, falta cuDNN o no se compiló con `-DONNX_GPU=ON`.
-- Las posiciones 3D están en `camera_color_optical_frame` (z hacia delante, x derecha, y abajo): los rosbags no tienen TF a `base_link`. Los extrínsecos depth → color están fijos en `people_bag.launch.py` (leídos del topic `extrinsics/depth_to_color` del rosbag).
+- Las posiciones 3D están en `camera_color_optical_frame` (z hacia delante, x derecha, y abajo): los rosbags no tienen TF a `base_link`. Los extrínsecos depth → color están fijos en `go2w_perception/camera_source.py` (leídos del topic `extrinsics/depth_to_color` del rosbag).
 - Con la cámara real no hace falta alinear: lanzar la RealSense con `align_depth.enable:=true` y usar `aligned_depth_to_color`.
 - Los pesos de Ultralytics (YOLO26) son AGPL-3.0, no MIT como `yolo_ros`.
 
