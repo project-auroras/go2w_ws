@@ -11,14 +11,14 @@
     plugins: ["detection", "tracking", "detection3d", "debug"]
     cameras: ["cam0"]
     cam0:
-      rgb_topic: /camera_local/color/image_raw
-      depth_topic: /camera_local/aligned_depth/image_raw
+      rgb_topic: /camera/camera/color/image_raw
+      depth_topic: /camera/camera/aligned_depth_to_color/image_raw
       depth_info_topic: /camera/camera/aligned_depth_to_color/camera_info
       image_reliability: 1
       depth_reliability: 1
     detection:
       plugin: yolo_ros/DetectionPlugin
-      model_path: /ws/models/yolo26m_datasetFinal.onnx
+      model_path: models/yolo26m_datasetFinal.onnx
       # bajo para la primera prueba: ver con class_stats qué puntuaciones da en el campo
       threshold: 0.35
       iou: 0.45
