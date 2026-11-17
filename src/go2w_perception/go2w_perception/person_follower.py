@@ -140,11 +140,21 @@ class PersonFollower(Node):
         self.robot_back = p('robot_back', -0.55).value       # m de base_link a la cola
         self.robot_half_width = p('robot_half_width', 0.35).value
         self.side_margin = p('side_margin', 0.20).value
+        # parado o despacio el pasillo es más estrecho: cabe por huecos a poca velocidad
+        self.side_margin_min = p('side_margin_min', 0.05).value
         self.stop_distance = p('stop_distance', 0.4).value
         self.obstacle_decel = p('obstacle_decel', 1.0).value
         self.obstacle_latency = p('obstacle_latency', 0.3).value
+        # puntos mínimos para que algo sea obstáculo (Nav2 collision monitor: min_points)
+        self.min_points = max(1, p('min_points', 3).value)
+        # el límite por obstáculo baja al momento pero solo sube tras release_time s libre
+        self.obstacle_release_time = p('obstacle_release_time', 0.6).value
         self.avoid_distance = p('avoid_distance', 0.5).value
         self.k_avoid = p('k_avoid', 1.0).value
+        self.avoid_tau = p('avoid_tau', 0.5).value          # s, filtro del giro de esquiva
+        # órdenes más pequeñas que esto van a 0: el Go2-W zapatea con órdenes mínimas
+        self.min_cmd_linear = p('min_cmd_linear', 0.05).value
+        self.min_cmd_angular = p('min_cmd_angular', 0.1).value
         self.person_clearance = p('person_clearance', 0.4).value
         self.person_trail_time = p('person_trail_time', 1.5).value
         rate = p('rate', 10.0).value
@@ -174,6 +184,9 @@ class PersonFollower(Node):
         self.scan_time = None
         self.scan_tf = {}           # frame -> (x, y, yaw) hasta base_link
         self.last_vx = self.last_wz = 0.0
+        self.obstacle_limit = [math.inf, math.inf]     # v máx. delante / detrás activas
+        self.obstacle_release = [0.0, 0.0]             # instante desde el que pueden subir
+        self.wz_avoid = 0.0
         self.get_logger().info(
             f'{input_topic} -> {cmd_vel_topic}, distancia objetivo {self.target_distance} m'
             f' + {self.time_gap} s x v_persona; obstáculos '
@@ -298,31 +311,64 @@ class PersonFollower(Node):
             pts = pts[d2.min(axis=1) > self.person_clearance ** 2]
         return pts
 
-    def obstacle_limits(self, pts):
+    def nth_closest(self, d):
+        """Distancia del min_points-ésimo punto más cercano: un punto suelto (ruido del
+        LiDAR, suelo, estela) no frena el robot."""
+        if len(d) < self.min_points:
+            return math.inf
+        return float(np.partition(d, self.min_points - 1)[self.min_points - 1])
+
+    def obstacle_limits(self, pts, t):
         """(v máx. hacia delante, v máx. hacia atrás, giro de repulsión, hueco delante)."""
-        hw = self.robot_half_width + self.side_margin
+        # pasillo de frenada: más ancho cuanto más rápido va
+        speed = min(1.0, abs(self.last_vx) / max(self.max_linear, 1e-3))
+        hw = self.robot_half_width + self.side_margin_min \
+            + (self.side_margin - self.side_margin_min) * speed
         x, y = pts[:, 0], pts[:, 1]
         in_lane = np.abs(y) < hw
-        ahead = x[in_lane & (x > self.robot_front)]
-        behind = x[in_lane & (x < self.robot_back)]
-        gap_front = ahead.min() - self.robot_front if len(ahead) else math.inf
-        gap_back = self.robot_back - behind.max() if len(behind) else math.inf
+        gap_front = self.nth_closest(x[in_lane & (x > self.robot_front)] - self.robot_front)
+        gap_back = self.nth_closest(self.robot_back - x[in_lane & (x < self.robot_back)])
 
-        def allowed(gap, v_now):
-            # poder frenar antes de stop_distance, contando con el retraso del scan
-            room = gap - self.stop_distance - abs(v_now) * self.obstacle_latency
-            return math.sqrt(2.0 * self.obstacle_decel * room) if room > 0.0 else 0.0
+        def allowed(gap):
+            # la v con la que recorre latency * v + v^2 / (2 decel) = gap - stop_distance:
+            # no depende de la velocidad actual (si dependiera, ir rápido baja el límite,
+            # frena, el límite sube, acelera... y va a tirones)
+            room = gap - self.stop_distance
+            if room <= 0.0:
+                return 0.0
+            a, lat = self.obstacle_decel, self.obstacle_latency
+            return a * (-lat + math.sqrt(lat * lat + 2.0 * room / a))
 
-        # repulsión lateral: distancia de cada punto al rectángulo del robot (sin la cola)
+        # histéresis: el límite baja al momento y solo sube cuando lleva release_time s
+        # pudiendo subir (Nav2 collision monitor: parado hasta que el obstáculo se va)
+        limits = []
+        for i, v in enumerate((allowed(gap_front), allowed(gap_back))):
+            if v < self.obstacle_limit[i]:
+                self.obstacle_limit[i] = v
+                self.obstacle_release[i] = t + self.obstacle_release_time
+            elif t >= self.obstacle_release[i]:
+                self.obstacle_limit[i] = v
+            limits.append(self.obstacle_limit[i])
+
+        # repulsión lateral, solo con lo que tiene por delante del centro (lo que ya ha
+        # pasado a los lados no le hace girar) y escalada con la velocidad
         dx = np.maximum(x - self.robot_front, 0.0)
         dy = np.maximum(np.abs(y) - self.robot_half_width, 0.0)
-        near = (x > self.robot_back) & (np.hypot(dx, dy) < self.avoid_distance)
-        w = (self.avoid_distance - np.hypot(dx[near], dy[near])) / self.avoid_distance
-        left = w[y[near] > 0.0].max() if np.any(y[near] > 0.0) else 0.0
-        right = w[y[near] <= 0.0].max() if np.any(y[near] <= 0.0) else 0.0
-        wz_avoid = self.k_avoid * (right - left)   # obstáculo a la izquierda -> gira a la derecha
-        return (allowed(gap_front, self.last_vx), allowed(gap_back, self.last_vx),
-                wz_avoid, gap_front)
+        dist = np.hypot(dx, dy)
+        near = (x > 0.0) & (dist < self.avoid_distance)
+        w = (self.avoid_distance - dist[near]) / self.avoid_distance
+        yn = y[near]
+        # media de los min_points más fuertes de cada lado: un punto suelto no cuenta
+        def side(ws):
+            if len(ws) < self.min_points:
+                return 0.0
+            return float(np.sort(ws)[-self.min_points:].mean())
+        left, right = side(w[yn > 0.0]), side(w[yn <= 0.0])
+        # obstáculo a la izquierda -> gira a la derecha; en un pasillo los dos lados se anulan
+        target = self.k_avoid * (right - left) * speed
+        k = min(1.0, self.dt / max(self.avoid_tau, 1e-3))
+        self.wz_avoid += k * (target - self.wz_avoid)
+        return limits[0], limits[1], self.wz_avoid, gap_front
 
     # ---------------------------------------------------------------- detecciones
     def on_people(self, msg):
@@ -393,6 +439,11 @@ class PersonFollower(Node):
     def publish(self, vx, wz):
         vx = ramp(vx, self.last_vx, self.max_accel, self.max_decel, self.dt)
         wz = ramp(wz, self.last_wz, self.max_angular_accel, self.max_angular_accel, self.dt)
+        # órdenes mínimas a 0: el Go2-W mueve las patas con cada una (zapatea)
+        if abs(vx) < self.min_cmd_linear:
+            vx = 0.0
+        if vx == 0.0 and abs(wz) < self.min_cmd_angular:
+            wz = 0.0
         cmd = Twist()
         cmd.linear.x, cmd.angular.z = vx, wz
         self.cmd_pub.publish(cmd)
@@ -499,8 +550,8 @@ class PersonFollower(Node):
                 self.get_logger().warn('Sin /scan reciente: no me desplazo (solo giro)',
                                        throttle_duration_sec=2.0)
                 note = ', SIN SCAN'
-            elif len(pts):
-                v_fwd, v_back, wz_avoid, gap = self.obstacle_limits(pts)
+            else:
+                v_fwd, v_back, wz_avoid, gap = self.obstacle_limits(pts, t)
                 if vx > v_fwd:
                     vx = v_fwd
                     # frenar por un obstáculo no espera a la rampa
@@ -510,7 +561,7 @@ class PersonFollower(Node):
                     vx = -v_back
                     self.last_vx = max(self.last_vx, -v_back)
                     note = ', obstáculo detrás'
-                if vx > 0.05 and wz_avoid != 0.0:
+                if abs(wz_avoid) > 0.05:
                     wz = clamp(wz + wz_avoid, self.max_angular)
                     note += f', esquiva {wz_avoid:+.2f}'
 

@@ -11,6 +11,7 @@ services:
     network_mode: host   # DDS discovery with the robot
     ipc: host            # DDS shared memory
     gpus: all            # NVIDIA GPU for OpenGL (needs nvidia-container-toolkit on the host)
+    privileged: true     # USB cameras (RealSense) without udev rules or permissions for dev
     environment:
       - DISPLAY=${DISPLAY}
       - NVIDIA_DRIVER_CAPABILITIES=all
@@ -20,6 +21,7 @@ services:
       - ..:/ws
       - ${BAGS_DIR:-${HOME}/rosbags}:/bags   # rosbags (BAGS_DIR overrides the folder)
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - /dev:/dev        # the RealSense changes USB node when it resets
     devices:
       - /dev/dri:/dev/dri
     stdin_open: true

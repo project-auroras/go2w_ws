@@ -48,12 +48,18 @@ person_follower:
     robot_front: 0.45
     robot_back: -0.55
     robot_half_width: 0.35
-    side_margin: 0.20           # m de más a cada lado en el pasillo de frenada
+    side_margin: 0.20           # m de más a cada lado en el pasillo de frenada, a max_linear
+    side_margin_min: 0.05       # m de más a cada lado parado (crece con la velocidad): pasa por huecos despacio
     stop_distance: 0.4          # m: siempre puede frenar antes de esto del obstáculo
     obstacle_decel: 1.0         # m/s^2 con los que calcula la frenada
     obstacle_latency: 0.3       # s de retraso del scan (lio_scan junta 1 s de nubes)
+    min_points: 3               # puntos del scan para que algo sea obstáculo (uno suelto es ruido)
+    obstacle_release_time: 0.6  # s: el límite por obstáculo baja al momento, sube tras esto libre (sin tirones)
     avoid_distance: 0.5         # m: obstáculos más cerca a los lados -> se aparta
-    k_avoid: 1.0                # rad/s de giro para apartarse (máximo)
+    k_avoid: 1.0                # rad/s de giro para apartarse (máximo, a max_linear; parado no esquiva)
+    avoid_tau: 0.5              # s, filtro del giro de esquiva (sin él va de izquierda a derecha)
+    min_cmd_linear: 0.05        # m/s: órdenes menores van a 0 (el Go2-W zapatea con órdenes mínimas)
+    min_cmd_angular: 0.1        # rad/s: ídem para el giro, con el robot parado
     person_clearance: 0.4       # m alrededor de la persona seguida que no son obstáculo
     person_trail_time: 1.5      # s de recorrido de la persona que no son obstáculo (estela del scan)
     rate: 10.0

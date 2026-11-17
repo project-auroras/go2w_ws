@@ -28,7 +28,8 @@ install_system() {
     ros-humble-pcl-ros \
     ros-humble-rviz2 \
     ros-humble-plotjuggler-ros \
-    ros-humble-slam-toolbox
+    ros-humble-slam-toolbox \
+    ros-humble-realsense2-camera
   [ -f /etc/ros/rosdep/sources.list.d/20-default.list ] || $SUDO rosdep init
 }
 
