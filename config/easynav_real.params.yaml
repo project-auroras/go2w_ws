@@ -59,17 +59,22 @@ localizer_node:
       reseed_freq: 0.1
       plugin: easynav_fusion_localizer/FusionLocalizer
       global_filter:
-        two_d_mode: false
+        # planar: roll, pitch and z of /odom are base_link's, the filter frame is base_footprint
+        two_d_mode: true
         publish_tf: true
         map_frame: map
         odom_frame: odom
         base_link_frame: base_footprint
         world_frame: map
         odom0: /odom
+        # Only velocities (vx, vy, vyaw). The pose of /odom is in frame odom and the filter would
+        # move it to map with the map -> odom TF that it publishes itself: a loop that drifted
+        # and tilted map -> odom on the real robot (2026-11-17). Velocities are in base_link and
+        # do not go through map -> odom: the filter integrates them and map -> odom stays ~identity
         odom0_config:
-          [true,  true,  true,
-           true,  true,  true,
-           true,  false, false,
+          [false, false, false,
+           false, false, false,
+           true,  true,  false,
            false, false, true,
            false, false, false]
         odom0_differential: false
