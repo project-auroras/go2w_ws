@@ -24,5 +24,8 @@ services:
       - /dev:/dev        # the RealSense changes USB node when it resets
     devices:
       - /dev/dri:/dev/dri
+    # /dev/video* (cameras) belong to the video group: without it, dev gets "Permission denied"
+    group_add:
+      - video
     stdin_open: true
     tty: true

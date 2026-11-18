@@ -29,13 +29,16 @@ install_system() {
     ros-humble-rviz2 \
     ros-humble-plotjuggler-ros \
     ros-humble-slam-toolbox \
-    ros-humble-realsense2-camera
+    ros-humble-realsense2-camera \
+    python3-pynvml
   [ -f /etc/ros/rosdep/sources.list.d/20-default.list ] || $SUDO rosdep init
 }
 
 install_ws() {
   mkdir -p "$WS/src/external"
   vcs import --recursive "$WS/src/external" < "$WS/deps.repos"
+  # rqml_vitals is a Qt6 GUI (rqml) that does not build on Humble: only the collector is used
+  touch "$WS/src/external/ros2_vitals/rqml_vitals/COLCON_IGNORE"
   rosdep update --rosdistro humble
   $SUDO apt-get update
   # ros_gz keys: Fortress on Humble, conflicts with the Harmonic ros_gz of the PC image

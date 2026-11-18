@@ -39,3 +39,10 @@ repositories:
     type: git
     url: https://github.com/mgonzs13/yolo_ros.git
     version: 7924a8be76c81f4051370e254677516ca696a272
+  # Hardware monitoring (CPU, RAM, temperatures, network, NVIDIA GPU, per-node CPU/RAM):
+  # /vitals/status, recorded in the test bags (go2w_metrics). Its rqml_vitals (Qt6 GUI)
+  # is not built: install_deps.sh adds COLCON_IGNORE to it.
+  ros2_vitals:
+    type: git
+    url: https://github.com/tu-darmstadt-ros-pkg/ros2_vitals.git
+    version: 378bf9114b5c406e60ec28e5d9a5c6bd042ec219
