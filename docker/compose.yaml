@@ -21,5 +21,8 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
     devices:
       - /dev/dri:/dev/dri
+    # /dev/video* (cameras) belong to the video group: without it, dev gets "Permission denied"
+    group_add:
+      - video
     stdin_open: true
     tty: true
