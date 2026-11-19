@@ -17,6 +17,8 @@
   <exec_depend>rosidl_runtime_py</exec_depend>
   <exec_depend>python3-numpy</exec_depend>
   <exec_depend>python3-psutil</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>
