@@ -23,6 +23,7 @@ setup(
         'console_scripts': [
             'jetson_stats = go2w_metrics.jetson_stats:main',
             'bag_to_csv = go2w_metrics.bag_to_csv:main',
+            'validate = go2w_metrics.validate:main',
         ],
     },
 )
