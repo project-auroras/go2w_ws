@@ -135,6 +135,10 @@ ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angula
 ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_down'"
 ```
 
+## Validación
+
+Protocolo de pruebas en el robot (FAST-LIO, EasyNav, consumo de la NX), criterios de aceptación y resultados: [`docs/validation/`](docs/validation/README.md).
+
 ## Pendiente de verificar en el robot
 
 Verificado (2026-10-20): **índices de las ruedas** 12-15 = FR, FL, RR, RL, con las patas en el orden de Unitree.
