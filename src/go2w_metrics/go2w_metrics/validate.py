@@ -268,7 +268,7 @@ def nav_section(rep, d, o):
 def hardware_section(rep, bag, out_dir):
     csv_dir = os.path.join(out_dir, 'csv')
     convert(bag, csv_dir, 0.0, '/external')
-    rep.section('Hardware (NX)')
+    rep.section('Hardware')
 
     def load(name):
         p = os.path.join(csv_dir, name)

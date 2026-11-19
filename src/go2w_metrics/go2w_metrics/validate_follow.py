@@ -10,10 +10,12 @@ import math
 
 import numpy as np
 
+from go2w_metrics.validate_detect import CRITERIA as DETECT_CRITERIA
 from go2w_metrics.validate_detect import TOPICS as DETECT_TOPICS, perception_section
 
 TOPICS = DETECT_TOPICS | {'/person_follower/status'}
 CRITERIA = {
+    **{k: DETECT_CRITERIA[k] for k in ('people_hz', 'perception_latency_p95_ms')},
     'follow_distance_error_mean_m': ('<=', 0.30),
     'follow_distance_error_p95_m': ('<=', 0.80),
     'follow_min_distance_m': ('>=', 0.90),
