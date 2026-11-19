@@ -59,7 +59,7 @@ fi
 
 if $METRICS; then
   if ros2 pkg prefix go2w_metrics >/dev/null 2>&1 && ros2 pkg prefix ros2_vitals >/dev/null 2>&1; then
-    ros2 launch go2w_metrics metrics.launch.py jetson:=true > "$WS/bags/$NAME.metrics.log" 2>&1 &
+    ros2 launch go2w_metrics metrics.launch.py jetson:=true < /dev/null > "$WS/bags/$NAME.metrics.log" 2>&1 &
     METRICS_PID=$!
     sleep 3
   else
@@ -80,7 +80,8 @@ esac
 T0=$(date +%s)
 # own process group (set -m): Ctrl+C in this terminal stops ros2 bag cleanly via the trap
 trap 'kill -INT -- "-$REC_PID" 2>/dev/null' INT
-ros2 bag record -o "$OUT" "${TOPICS[@]}" > "$WS/bags/$NAME.record.log" 2>&1 &
+# stdin from /dev/null: with the terminal, its keyboard handler gets the background job stopped (SIGTTOU)
+ros2 bag record -o "$OUT" "${TOPICS[@]}" < /dev/null > "$WS/bags/$NAME.record.log" 2>&1 &
 REC_PID=$!
 wait "$REC_PID"
 wait "$REC_PID" 2>/dev/null
