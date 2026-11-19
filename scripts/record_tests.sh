@@ -38,6 +38,7 @@ set -u
 EXT=/external/cam/color/image_raw/compressed
 NX=/camera/camera/color/image_raw/compressed
 TOPICS=("$EXT" "$NX" /people /yolo/cam0/detections_3d /cmd_vel /odom /scan /tf /tf_static /rosout
+        /person_follower/status         # follower state (validate --test follow)
         /vitals/status /jetson/stats)   # hardware of laptop + NX (go2w_metrics), CSV with bag_to_csv
 
 SESSION=$(date +%F_%H-%M-%S)
@@ -114,6 +115,33 @@ if ! check; then
   echo "      and the logs in $LOGS"
 fi
 
+# meta.yaml next to the bag for: ros2 run go2w_metrics validate /bags/<name>
+# (protocol and tests: docs/validation/people_follow.md)
+write_meta() {
+  local test marks="" notes provider
+  read -r -p "[rec] test (detect / follow / free) [follow]: " test
+  test=${test:-follow}
+  if [ "$test" = detect ]; then
+    read -r -p "[rec] tape marks in m, in order (e.g. 1 2 3 4 5 6): " marks
+  fi
+  read -r -p "[rec] scenario / place / notes: " notes
+  provider=$(grep -ohE 'Using execution provider: [a-z]+' "$LOGS/yolo.log" | tail -1 | awk '{print $4}')
+  {
+    echo "test: $test"
+    echo "date: $(date -Iseconds)"
+    echo "host: $(hostname)"
+    echo "git: $(git -C "$WS" rev-parse --short HEAD) ($(git -C "$WS" rev-parse --abbrev-ref HEAD))$(git -C "$WS" diff --quiet || echo ' +uncommitted')"
+    echo "follower: $FOLLOWER"
+    echo "max_linear: $MAX_LINEAR"
+    echo "max_angular: $MAX_ANGULAR"
+    echo "yolo_provider: ${provider:-unknown}"
+    echo "clock_offset_s: null   # NX - laptop (claps, scripts/bag_frames.py); fill in to get camera latency"
+    echo "ground_truth:"
+    [ -n "$marks" ] && echo "  marks_m: [${marks// /, }]" || echo "  none: null"
+    echo "notes: \"${notes//\"/\'}\""
+  } > "$1/meta.yaml"
+}
+
 N=0
 while true; do
   echo
@@ -152,6 +180,7 @@ while true; do
   stop_group "$REC_PID"
   REC_PID=""
   if [ -f "$BAG/metadata.yaml" ]; then
+    write_meta "$BAG"
     echo "[rec] saved $BAG:"
     ros2 bag info "$BAG" 2>/dev/null | grep -E "Duration|Topic: ($EXT|$NX|/people) " \
       | sed -E 's/ +\| Serialization.*//; s/^ */  /'

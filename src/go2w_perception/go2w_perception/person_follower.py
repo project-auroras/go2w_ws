@@ -1,3 +1,4 @@
+import json
 import math
 from collections import deque
 
@@ -10,6 +11,7 @@ from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
 from rclpy.time import Time
 from sensor_msgs.msg import LaserScan
+from std_msgs.msg import String
 from tf2_ros import Buffer, TransformException, TransformListener
 from yolo_msgs.msg import DetectionArray
 
@@ -161,6 +163,8 @@ class PersonFollower(Node):
         self.dt = 1.0 / rate
 
         self.cmd_pub = self.create_publisher(Twist, cmd_vel_topic, 10)
+        # estado para los experimentos (go2w_metrics validate --test follow): JSON en cada ciclo
+        self.status_pub = self.create_publisher(String, '~/status', 10)
         self.create_subscription(DetectionArray, input_topic, self.on_people, 10)
         self.create_subscription(Odometry, odom_topic, self.on_odom, 10)
         if self.obstacle_avoidance:
@@ -187,6 +191,7 @@ class PersonFollower(Node):
         self.obstacle_limit = [math.inf, math.inf]     # v máx. delante / detrás activas
         self.obstacle_release = [0.0, 0.0]             # instante desde el que pueden subir
         self.wz_avoid = 0.0
+        self.status = {}            # lo que calcula follow() en este ciclo, para ~/status
         self.get_logger().info(
             f'{input_topic} -> {cmd_vel_topic}, distancia objetivo {self.target_distance} m'
             f' + {self.time_gap} s x v_persona; obstáculos '
@@ -458,6 +463,19 @@ class PersonFollower(Node):
     def control(self):
         if self.odom is None:
             return
+        self.status = {}
+        self.control_step()
+        st = {'state': self.state, 'id': self.current_id, 'cmd_vx': self.last_vx,
+              'cmd_wz': self.last_wz, 'obstacle_limit': self.obstacle_limit[0]}
+        if self.track is not None:
+            st.update(x=self.track.x, y=self.track.y, vx=self.track.vx, vy=self.track.vy,
+                      seen_ago=self.now() - self.last_seen)
+        st.update(self.status)
+        # inf (sin límite por obstáculo) -> null: JSON válido
+        st = {k: (None if isinstance(v, float) and not math.isfinite(v) else v) for k, v in st.items()}
+        self.status_pub.publish(String(data=json.dumps(st, default=str)))
+
+    def control_step(self):
         t = self.now()
         if self.track is not None and t - self.last_seen > self.lost_timeout:
             self.get_logger().warn(
@@ -566,6 +584,8 @@ class PersonFollower(Node):
                     note += f', esquiva {wz_avoid:+.2f}'
 
         cmd = self.publish(vx, wz)
+        self.status = {'distance': distance, 'bearing': bearing, 'target_distance': target,
+                       'v_person': v_person, 'note': note.lstrip(', ')}
         self.get_logger().info(
             f'id {self.current_id}: d={distance:.2f} m (obj {target:.2f}), '
             f'ang={math.degrees(bearing):+.0f} deg, v_persona={v_person:.2f}'
