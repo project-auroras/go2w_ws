@@ -10,12 +10,16 @@ report.md, metrics.yaml and plots. Hardware comes from /vitals/status and /jetso
 
 Tests: static (drift at rest), line (straight line vs tape), spin (turns in place),
 loop (closed loop back to a floor mark), nav (EasyNav goals), free (only topics + hardware).
+Other tests live in their own module go2w_metrics/validate_<test>.py with TOPICS (extra topics
+to read), CRITERIA and section(rep, d, o, meta); e.g. detect / follow (person follower).
 """
 
 import argparse
 import csv
+import importlib
 import math
 import os
+import re
 import sys
 from collections import defaultdict
 
@@ -51,6 +55,7 @@ CRITERIA = {
 # process names of the localization stack (ros2_vitals node names)
 LIO_STACK = ('laser_mapping', 'fastlio_mapping', 'lio_scan', 'go2w_driver')
 
+BUILTIN = ('static', 'line', 'spin', 'loop', 'nav', 'free')
 TOPICS = {'/utlidar/cloud', '/utlidar/imu', '/lidar_imu', '/Odometry', '/odom', '/scan',
           '/cmd_vel', '/goal_pose', '/easynav_control'}
 
@@ -67,7 +72,7 @@ def wrap(a):
     return (a + math.pi) % (2 * math.pi) - math.pi
 
 
-def read_bag(bag):
+def read_bag(bag, topics=TOPICS):
     with open(os.path.join(bag, 'metadata.yaml')) as f:
         storage = yaml.safe_load(f)['rosbag2_bagfile_information']['storage_identifier']
     r = SequentialReader()
@@ -76,7 +81,7 @@ def read_bag(bag):
     d = defaultdict(list)   # topic -> [(t_bag, t_stamp, msg)]
     while r.has_next():
         topic, data, t = r.read_next()
-        if topic not in TOPICS or topic not in types:
+        if topic not in topics or topic not in types:
             continue
         m = deserialize_message(data, get_message(types[topic]))
         h = getattr(m, 'header', None)
@@ -269,7 +274,19 @@ def hardware_section(rep, bag, out_dir):
         p = os.path.join(csv_dir, name)
         return list(csv.DictReader(open(p))) if os.path.isfile(p) else []
 
-    jet, procs = load('jetson.csv'), load('processes.csv')
+    jet, procs, system = load('jetson.csv'), load('processes.csv'), load('system.csv')
+    by_host = defaultdict(list)
+    for r in system:
+        by_host[r['host']].append(r)
+    for host, rs in sorted(by_host.items()):
+        def col(k):
+            return np.array([float(r[k]) for r in rs if r.get(k) not in (None, '')])
+        h = re.sub(r'\W', '_', host).lower()
+        c = col('cpu_percent')
+        if len(c):
+            rep.add(f'hw_{h}_cpu_mean_pct', c.mean(), '%', f'{host}: max {c.max():.0f} %, {rs[0].get("cpu_count")} cores (ros2_vitals)')
+        if len(g := col('gpu0_percent')):
+            rep.add(f'hw_{h}_gpu_mean_pct', g.mean(), '%', f'max {g.max():.0f} %, VRAM max {col("gpu0_mem_used_mb").max():.0f} MB')
     hw = {}
     if jet:
         def col(k):
@@ -360,7 +377,11 @@ def run(bag, test=None):
     out_dir = os.path.join(bag, 'report')
     os.makedirs(out_dir, exist_ok=True)
     print(f'{bag}: test {test}')
-    d = read_bag(bag)
+    mod = None
+    if test not in BUILTIN:
+        mod = importlib.import_module(f'go2w_metrics.validate_{test}')
+        CRITERIA.update(getattr(mod, 'CRITERIA', {}))
+    d = read_bag(bag, TOPICS | set(getattr(mod, 'TOPICS', ())))
     o, O = odom_array(d.get('/odom', [])), odom_array(d.get('/Odometry', []))
     rep = Report()
     topics_section(rep, d)
@@ -368,6 +389,8 @@ def run(bag, test=None):
         {'static': lambda: static_section(rep, o, O), 'line': lambda: line_section(rep, o, gt),
          'spin': lambda: spin_section(rep, o, gt), 'loop': lambda: loop_section(rep, o, gt),
          'nav': lambda: nav_section(rep, d, o)}.get(test, lambda: None)()
+    if mod:
+        mod.section(rep, d, o, meta)
     hw = hardware_section(rep, bag, out_dir)
     pics = plots(out_dir, o, hw, test)
     verdict = ('FAIL' if 'FAIL' in rep.results else 'INCOMPLETE' if 'MISSING' in rep.results
@@ -391,8 +414,8 @@ def main():
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 epilog=__doc__.split('\n\n', 1)[1])
     p.add_argument('bags', nargs='+')
-    p.add_argument('--test', choices=['static', 'line', 'spin', 'loop', 'nav', 'free'],
-                   help='override meta.yaml')
+    p.add_argument('--test', help='override meta.yaml: ' + ', '.join(BUILTIN) +
+                   ' or a go2w_metrics/validate_<test>.py module (detect, follow...)')
     a = p.parse_args()
     bad = 0
     for bag in a.bags:
