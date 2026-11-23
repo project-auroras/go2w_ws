@@ -101,7 +101,8 @@ case "$TEST" in
 esac
 read -rp "Place / surface / notes: " NOTES
 # which /scan node ran (CPU of the LIO stack depends on it)
-LIO_SCAN=$(pgrep -af "lio_scan" | grep -o -m1 -E "lio_scan_cpp|lio_scan\.py" || echo none)
+PROCS=$(pgrep -af "lib/go2w_bringup/lio_scan")   # stored first: a grep in the pipe would match itself
+case "$PROCS" in *lio_scan_cpp*) LIO_SCAN=lio_scan_cpp ;; *lio_scan.py*) LIO_SCAN=lio_scan.py ;; *) LIO_SCAN=none ;; esac
 cat > "$OUT/meta.yaml" <<EOF
 test: $TEST
 date: $(date -Iseconds)
