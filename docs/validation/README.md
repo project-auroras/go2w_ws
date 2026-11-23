@@ -8,6 +8,7 @@ Qué se mide, cómo y con qué criterio se da por bueno, antes de montar encima 
 |---|---|---|
 | `scripts/validation/record.sh <prueba>` | NX | Comprobación previa (frecuencias, TF) + métricas de hardware (`go2w_metrics`) + bag en `bags/<fecha>_<prueba>/` + pregunta la medida real y la guarda en `meta.yaml` |
 | `scripts/validation/preflight.py` | NX | Solo la comprobación previa |
+| `scripts/validation/drive_line.py [m] --speed v` | NX | Recta para L2: `/cmd_vel` a 50 Hz con rampas, sin corregir el rumbo; para tras `m` metros de `/odom` (10 m a 0.3 m/s por defecto) |
 | `scripts/validation/send_goal.py <adelante> [izquierda] [giro]` | NX o PC | Objetivo de EasyNav relativo al robot (`5` = 5 m al frente, `--back` vuelve al inicio). Espera el resultado e imprime tiempo y error |
 | `ros2 run go2w_metrics validate <bag>` | PC (contenedor) | Informe: `report/report.md`, `metrics.yaml`, `trajectory.png`, `hardware.png`, CSV de hardware |
 
@@ -47,7 +48,7 @@ Los umbrales están en `CRITERIA` de `src/go2w_metrics/go2w_metrics/validate.py`
 |---|---|---|---|
 | L0 | Entradas | En todas las pruebas | nube ≥ 14 Hz, IMU ≥ 230 Hz, `/odom` ≥ 14 Hz sin huecos > 200 ms, latencia nube → `/Odometry` p95 ≤ 100 ms |
 | L1 | `static` | Robot de pie, quieto, nadie alrededor, **5 min** | deriva ≤ 5 cm y ≤ 1° en 5 min (pendiente de una recta ajustada a x, y, yaw; el temblor del robot de pie se da aparte) |
-| L2 | `line` | Marca en el suelo y línea de referencia (cinta de carrocero), robot alineado con ella, ~10 m a velocidad constante sin corregir. Cinta: distancia **en línea recta** marca → robot (en diagonal si se ha desviado) y desvío lateral respecto a la línea. ×2 a 0.3 m/s y ×1 a ~1 m/s | error de escala ≤ 2 % |
+| L2 | `line` | Marca en el suelo y línea de referencia (cinta de carrocero), robot alineado con ella, `drive_line.py` (10 m a velocidad constante sin corregir; `ros2 topic pub` va a tirones). Cinta: distancia **en línea recta** marca → robot (en diagonal si se ha desviado) y desvío lateral respecto a la línea. ×2 a 0.3 m/s y ×1 a ~1 m/s | error de escala ≤ 2 % |
 | L3 | `spin` | Sobre una marca, 3 vueltas en el sitio. ×1 a cada lado | ≤ 1° de error por vuelta; base_link se mueve ≤ 10 cm |
 | L4 | `loop` | Circuito cerrado de 30-50 m en interior, empezar y acabar en una marca, cinta del robot a la marca. ×2 | cota superior de deriva ≤ 0.5 % del recorrido |
 | L5 | `loop` exterior | Igual que L4 en el campo del MIC (poca estructura: es donde FAST-LIO puede degenerar) | ≤ 0.5 % (se documenta aunque falle: decide si hace falta GPS/ruedas) |
