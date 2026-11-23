@@ -100,6 +100,8 @@ case "$TEST" in
   loop) read -rp "Distance robot -> start mark at the end, tape [m]: " v; GT="return_error_m: ${v:-null}" ;;
 esac
 read -rp "Place / surface / notes: " NOTES
+# which /scan node ran (CPU of the LIO stack depends on it)
+LIO_SCAN=$(pgrep -af "lio_scan" | grep -o -m1 -E "lio_scan_cpp|lio_scan\.py" || echo none)
 cat > "$OUT/meta.yaml" <<EOF
 test: $TEST
 date: $(date -Iseconds)
@@ -107,6 +109,8 @@ duration_s: $DUR
 host: $(hostname)
 git: $(git -C "$WS" rev-parse --short HEAD) ($(git -C "$WS" rev-parse --abbrev-ref HEAD))$(git -C "$WS" diff --quiet || echo ' +uncommitted')
 raw_sensors: $RAW
+lio_scan: $LIO_SCAN
+numpy: $(python3 -c 'import numpy; print(numpy.__version__)' 2>/dev/null || echo none)
 ground_truth:
   ${GT:-none: null}
 notes: "${NOTES//\"/\'}"

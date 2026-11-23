@@ -417,7 +417,8 @@ def run(bag, test=None):
                else 'PASS' if rep.results else 'INFO')
     head = [f'## {os.path.basename(os.path.normpath(bag))} — {test}: **{verdict}**', '',
             f'- date: {meta.get("date", "?")}, duration {meta.get("duration_s", "?")} s, '
-            f'host {meta.get("host", "?")}, git {meta.get("git", "?")}',
+            f'host {meta.get("host", "?")}, git {meta.get("git", "?")}, '
+            f'lio_scan {meta.get("lio_scan", "?")}, numpy {meta.get("numpy", "?")}',
             f'- ground truth: {gt or "none"}', f'- notes: {meta.get("notes", "")}']
     md = head + rep.lines + [''] + [f'![{p}]({p})' for p in pics]
     with open(os.path.join(out_dir, 'report.md'), 'w') as f:

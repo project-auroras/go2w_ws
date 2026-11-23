@@ -27,6 +27,7 @@ scripts/nx_update.sh          # clona ros2_vitals (deps.repos) y compila go2w_me
 # NX, terminal 1: robot + FAST-LIO + lio_scan. Robot QUIETO ~2 s al arrancar (inicializa la IMU)
 GO2_IFACE=enP8p1s0 source scripts/env.sh
 ros2 launch go2w_bringup go2w.launch.py lio:=true 2>&1 | tee ~/launch.log
+#   lio_scan_cpp:=true -> /scan from the C++ node (same /scan, ~5x less CPU on the PC)
 # NX, terminal 2: de pie
 ros2 service call /mode go2_interfaces/srv/Mode "mode: 'stand_up'"
 # NX, terminal 3: cada prueba
