@@ -93,9 +93,14 @@ stop_group "$METRICS_PID"; METRICS_PID=""
 echo "== ground truth (empty = unknown)"
 GT=""
 case "$TEST" in
-  line) read -rp "Straight distance start mark -> robot (diagonal if it drifted), tape [m]: " v
-        read -rp "Lateral offset of the robot from the floor line, left + / right - [m]: " l
-        GT="distance_m: ${v:-null}"$'\n'"  lateral_m: ${l:-null}" ;;
+  line) while true; do
+          echo "   Robot point projected on the floor line (square / plumb line):"
+          read -rp "   1) along the line, start mark -> that projection [m]: " v
+          read -rp "   2) sideways, line -> robot point, LEFT + / RIGHT - looking forward [m]: " l
+          read -rp "   along ${v:-?} m, sideways ${l:-?} m. OK? [Y/n] " ok
+          [[ "$ok" =~ ^[Nn] ]] || break
+        done
+        GT="forward_m: ${v:-null}"$'\n'"  lateral_m: ${l:-null}" ;;
   spin) read -rp "Full turns done: " v; GT="turns: ${v:-null}" ;;
   loop) read -rp "Distance robot -> start mark at the end, tape [m]: " v; GT="return_error_m: ${v:-null}" ;;
 esac

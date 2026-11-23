@@ -41,6 +41,7 @@ CRITERIA = {
     'static_drift_xy_m_per_5min': ('<=', 0.05),
     'static_drift_yaw_deg_per_5min': ('<=', 1.0),
     'line_scale_error_pct': ('<=', 2.0),
+    'line_start_end_at_rest': ('>=', 1),
     'spin_yaw_error_deg_per_turn': ('<=', 1.0),
     'spin_translation_m': ('<=', 0.10),
     'loop_drift_upper_pct': ('<=', 0.5),
@@ -175,34 +176,66 @@ def static_section(rep, o, O):
                 '/Odometry (L1 frame), go2w_driver drops z')
 
 
-def line_section(rep, o, gt):
+def rest_pose(o, t0, t1):
+    """Mean pose (x, y, yaw) over [t0, t1] and its spread: the standing robot jitters ±2-4 deg
+    from sample to sample, a single sample is not a reliable start or end."""
+    m = (o[:, 0] >= t0) & (o[:, 0] <= t1)
+    if m.sum() < 5:
+        return None
+    w = o[m]
+    yaw = math.atan2(np.sin(w[:, 4]).mean(), np.cos(w[:, 4]).mean())
+    dyaw = np.degrees(np.abs([wrap(a - yaw) for a in w[:, 4]]))
+    dxy = np.linalg.norm(w[:, 1:3] - w[:, 1:3].mean(axis=0), axis=1)
+    return w[:, 1].mean(), w[:, 2].mean(), yaw, dxy.max(), dyaw.max()
+
+
+def line_section(rep, o, gt, cmds=()):
     rep.section('Straight line')
-    d = np.linalg.norm(o[-1, 1:3] - o[0, 1:3])
-    rep.add('line_distance_lio_m', d, 'm')
-    u = (o[-1, 1:3] - o[0, 1:3]) / max(d, 1e-6)
-    rel = o[:, 1:3] - o[0, 1:3]
-    lateral = np.abs(rel[:, 0] * u[1] - rel[:, 1] * u[0])
-    rep.add('line_lateral_max_m', lateral.max(), 'm', 'deviation from the start-end line')
-    rep.add('line_heading_change_deg', math.degrees(wrap(o[-1, 4] - o[0, 4])), 'deg')
-    tape = gt.get('distance_m')
-    if tape:
-        rep.add('line_distance_tape_m', tape, 'm')
-        rep.add('line_scale_error_pct', 100 * abs(d - tape) / tape, '%')
+    # motion = first to last non-zero /cmd_vel (drive_line.py); without it, odom speed > 0.1 m/s
+    moving = [t for t, _, m in cmds if abs(m.linear.x) > 1e-3]
+    if moving:
+        t_go, t_stop = moving[0], moving[-1]
     else:
+        v = np.r_[0, np.linalg.norm(np.diff(o[:, 1:3], axis=0), axis=1) / np.diff(o[:, 0])]
+        vs = np.convolve(v, np.ones(15) / 15, mode='same')
+        idx = np.flatnonzero(vs > 0.1)
+        if not len(idx):
+            rep.add('line_scale_error_pct', None, '%', 'no motion found')
+            return
+        t_go, t_stop = o[idx[0], 0], o[idx[-1], 0]
+    a = rest_pose(o, t_go - 1.5, t_go - 0.05)
+    b = rest_pose(o, t_stop + 1.0, t_stop + 2.5)
+    if a is None or b is None:
+        rep.add('line_start_end_at_rest', 0, '', 'need 1.5 s at rest before and 2.5 s after the motion')
+        return
+    # thresholds above the jitter of the standing robot (L1: up to 8 cm, ±2-4 deg sample to sample)
+    still = a[3] <= 0.10 and a[4] <= 6 and b[3] <= 0.10 and b[4] <= 6
+    rep.add('line_start_end_at_rest', int(still), '',
+            f'start: {a[3]*100:.1f} cm / {a[4]:.1f} deg, end: {b[3]*100:.1f} cm / {b[4]:.1f} deg '
+            '(max spread in the rest windows; robot moved -> start/end undefined, repeat)')
+    dx, dy = b[0] - a[0], b[1] - a[1]
+    d = math.hypot(dx, dy)
+    c, s = math.cos(a[2]), math.sin(a[2])
+    fwd, left = dx * c + dy * s, -dx * s + dy * c
+    rep.add('line_distance_lio_m', d, 'm', f'{t_stop - t_go:.0f} s of motion')
+    rep.add('line_end_lio_forward_m', fwd, 'm', 'in the start frame of the robot')
+    rep.add('line_end_lio_left_m', left, 'm', '+ left: wheel drift, the heading is not corrected')
+    rep.add('line_heading_change_deg', math.degrees(wrap(b[2] - a[2])), 'deg')
+    fwd_t, lat_t = gt.get('forward_m'), gt.get('lateral_m')
+    tape = math.hypot(fwd_t, lat_t) if fwd_t and lat_t is not None else gt.get('distance_m')
+    if not tape:
         rep.add('line_scale_error_pct', None, '%', 'no tape distance in meta.yaml')
-    # end point in the robot's start frame (x forward, y left): the wheels drift sideways in open
-    # loop, that is the robot, not odometry. With the tape lateral offset it is checked in 2D.
-    c, s = math.cos(o[0, 4]), math.sin(o[0, 4])
-    fwd, left = rel[-1, 0] * c + rel[-1, 1] * s, -rel[-1, 0] * s + rel[-1, 1] * c
-    rep.add('line_drift_lio_deg', math.degrees(math.atan2(left, fwd)), 'deg',
-            f'robot went {left:+.2f} m sideways in {fwd:.2f} m (wheels, + left)')
-    lat = gt.get('lateral_m')
-    if tape and lat is not None and abs(lat) < tape:
-        fwd_t = math.sqrt(tape ** 2 - lat ** 2)
-        rep.add('line_drift_tape_deg', math.degrees(math.atan2(lat, fwd_t)), 'deg',
-                'real drift, relative to the floor line')
-        rep.add('line_end_error_2d_m', math.hypot(fwd - fwd_t, left - lat), 'm',
-                'includes how well the robot was aligned with the line at the start')
+        return
+    note = f'hypot(forward {fwd_t}, lateral {lat_t})' if fwd_t else 'straight distance'
+    rep.add('line_distance_tape_m', tape, 'm', note)
+    rep.add('line_scale_error_pct', 100 * abs(d - tape) / tape, '%',
+            f'{100 * (d - tape) / tape:+.2f} % (- = LIO short)')
+    if fwd_t and lat_t is not None:
+        # the tape angle is relative to the floor line, the LIO angle to the start heading: the
+        # difference is how far the robot was from parallel to the line at the start (plus LIO yaw
+        # error, not separable). Only a sanity check, e.g. a wrong sign of the lateral offset.
+        diff = math.degrees(math.atan2(lat_t, fwd_t) - math.atan2(left, fwd))
+        rep.add('line_start_misalignment_deg', diff, 'deg', 'robot vs floor line at the start (+ LIO yaw error)')
 
 
 def spin_section(rep, o, gt):
@@ -410,7 +443,7 @@ def run(bag, test=None):
     rep = Report()
     topics_section(rep, d)
     if len(o) > 2:
-        {'static': lambda: static_section(rep, o, O), 'line': lambda: line_section(rep, o, gt),
+        {'static': lambda: static_section(rep, o, O), 'line': lambda: line_section(rep, o, gt, d.get('/cmd_vel', [])),
          'spin': lambda: spin_section(rep, o, gt), 'loop': lambda: loop_section(rep, o, gt),
          'nav': lambda: nav_section(rep, d, o)}.get(test, lambda: None)()
     if mod:
