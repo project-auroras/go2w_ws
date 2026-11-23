@@ -46,10 +46,12 @@ Los umbrales están en `CRITERIA` de `src/go2w_metrics/go2w_metrics/validate.py`
 |---|---|---|---|
 | L0 | Entradas | En todas las pruebas | nube ≥ 14 Hz, IMU ≥ 230 Hz, `/odom` ≥ 14 Hz sin huecos > 200 ms, latencia nube → `/Odometry` p95 ≤ 100 ms |
 | L1 | `static` | Robot de pie, quieto, nadie alrededor, **5 min** | deriva ≤ 5 cm y ≤ 1° en 5 min |
-| L2 | `line` | Marca en el suelo, recta de ~10 m a velocidad constante, cinta métrica. ×2 a 0.3 m/s y ×1 a ~1 m/s | error de escala ≤ 2 % |
+| L2 | `line` | Marca en el suelo y línea de referencia (cinta de carrocero), robot alineado con ella, ~10 m a velocidad constante sin corregir. Cinta: distancia **en línea recta** marca → robot (en diagonal si se ha desviado) y desvío lateral respecto a la línea. ×2 a 0.3 m/s y ×1 a ~1 m/s | error de escala ≤ 2 % |
 | L3 | `spin` | Sobre una marca, 3 vueltas en el sitio. ×1 a cada lado | ≤ 1° de error por vuelta; base_link se mueve ≤ 10 cm |
 | L4 | `loop` | Circuito cerrado de 30-50 m en interior, empezar y acabar en una marca, cinta del robot a la marca. ×2 | cota superior de deriva ≤ 0.5 % del recorrido |
 | L5 | `loop` exterior | Igual que L4 en el campo del MIC (poca estructura: es donde FAST-LIO puede degenerar) | ≤ 0.5 % (se documenta aunque falle: decide si hace falta GPS/ruedas) |
+
+En `line` las ruedas del Go2-W se desvían en lazo abierto (el robot acaba en diagonal): eso es el robot, no la odometría. La escala compara distancias inicio → fin en línea recta, así que el desvío no le afecta siempre que la cinta mida la diagonal. El informe da además el desvío según LIO y según la cinta (`line_drift_*_deg`) y el error del punto final en 2D, que incluye lo bien alineado que saliera el robot.
 
 En `loop` solo se conoce la **distancia** real a la marca, no la dirección, así que la deriva queda entre `|LIO - cinta|` y `LIO + cinta`. El criterio usa la cota superior (pesimista). Para que la cota sea útil, parar lo más cerca posible de la marca.
 

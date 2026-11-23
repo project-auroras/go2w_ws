@@ -93,7 +93,9 @@ stop_group "$METRICS_PID"; METRICS_PID=""
 echo "== ground truth (empty = unknown)"
 GT=""
 case "$TEST" in
-  line) read -rp "Distance start mark -> robot measured with tape [m]: " v; GT="distance_m: ${v:-null}" ;;
+  line) read -rp "Straight distance start mark -> robot (diagonal if it drifted), tape [m]: " v
+        read -rp "Lateral offset of the robot from the floor line, left + / right - [m]: " l
+        GT="distance_m: ${v:-null}"$'\n'"  lateral_m: ${l:-null}" ;;
   spin) read -rp "Full turns done: " v; GT="turns: ${v:-null}" ;;
   loop) read -rp "Distance robot -> start mark at the end, tape [m]: " v; GT="return_error_m: ${v:-null}" ;;
 esac

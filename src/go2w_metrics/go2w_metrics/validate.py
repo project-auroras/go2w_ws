@@ -183,6 +183,19 @@ def line_section(rep, o, gt):
         rep.add('line_scale_error_pct', 100 * abs(d - tape) / tape, '%')
     else:
         rep.add('line_scale_error_pct', None, '%', 'no tape distance in meta.yaml')
+    # end point in the robot's start frame (x forward, y left): the wheels drift sideways in open
+    # loop, that is the robot, not odometry. With the tape lateral offset it is checked in 2D.
+    c, s = math.cos(o[0, 4]), math.sin(o[0, 4])
+    fwd, left = rel[-1, 0] * c + rel[-1, 1] * s, -rel[-1, 0] * s + rel[-1, 1] * c
+    rep.add('line_drift_lio_deg', math.degrees(math.atan2(left, fwd)), 'deg',
+            f'robot went {left:+.2f} m sideways in {fwd:.2f} m (wheels, + left)')
+    lat = gt.get('lateral_m')
+    if tape and lat is not None and abs(lat) < tape:
+        fwd_t = math.sqrt(tape ** 2 - lat ** 2)
+        rep.add('line_drift_tape_deg', math.degrees(math.atan2(lat, fwd_t)), 'deg',
+                'real drift, relative to the floor line')
+        rep.add('line_end_error_2d_m', math.hypot(fwd - fwd_t, left - lat), 'm',
+                'includes how well the robot was aligned with the line at the start')
 
 
 def spin_section(rep, o, gt):
