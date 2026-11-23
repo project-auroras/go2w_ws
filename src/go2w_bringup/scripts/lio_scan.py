@@ -8,10 +8,10 @@ base_link with the /Odometry of the same stamp (not the odom TF: go2w_driver dro
 drift of FAST-LIO there, which would shift the height band) and cuts the band.
 The scan has the stamp of the cloud, the same as the odom -> base_footprint TF.
 """
-import array
 import os
-# One BLAS thread: the matrices are tiny, and a threaded OpenBLAS (aarch64) keeps its pool
-# spinning between clouds. Must be set before numpy is imported.
+# One BLAS thread. With the system numpy (apt 1.21 + openblas-pthread) the pool keeps spinning
+# between clouds: 300 % of the NX for (N,3) @ (3,3) products, 25 % with one thread
+# (docs/validation/results/2026-11-23_lio_scan.md). Must be set before numpy is imported.
 for _var in ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS'):
     os.environ.setdefault(_var, '1')
 from collections import deque  # noqa: E402
@@ -39,10 +39,9 @@ def matrix(q, t):
 
 def xyz(cloud):
     offsets = {f.name: f.offset for f in cloud.fields}
-    dtype = np.dtype({'names': ['x', 'y', 'z'], 'formats': ['<f4'] * 3,
-                      'offsets': [offsets[k] for k in 'xyz'], 'itemsize': cloud.point_step})
-    raw = np.frombuffer(cloud.data, dtype=dtype, count=cloud.width * cloud.height)
-    p = np.stack([raw['x'], raw['y'], raw['z']], axis=1).astype(np.float64)
+    raw = np.frombuffer(cloud.data, dtype=np.uint8).reshape(-1, cloud.point_step)
+    cols = [raw[:, offsets[k]:offsets[k] + 4].copy().view(np.float32)[:, 0] for k in 'xyz']
+    p = np.stack(cols, axis=1).astype(np.float64)
     return p[np.isfinite(p).all(axis=1)]
 
 
@@ -100,31 +99,22 @@ class LioScan(Node):
         while self.clouds and stamp - self.clouds[0][0] > self.window * 1e9:
             self.clouds.popleft()
 
-        # camera_init -> L1 now -> base_link. Height first: most points are floor, so x, y,
-        # range and angle are computed only for the points inside the band.
+        # camera_init -> L1 now -> base_link
         world_to_base = self.base_to_lidar @ np.linalg.inv(pose)
         p = np.vstack([c for _, c in self.clouds])
-        rot, tr = world_to_base[:3, :3], world_to_base[:3, 3]
-        z = p @ rot[2] + tr[2]
-        p = p[(z > self.min_height) & (z < self.max_height)]
-        x = p @ rot[0] + tr[0]
-        y = p @ rot[1] + tr[1]
+        p = p @ world_to_base[:3, :3].T + world_to_base[:3, 3]
 
         x0, x1, y0, y1 = self.self_box
-        r = np.hypot(x, y)
-        ok = ~((x > x0) & (x < x1) & (y > y0) & (y < y1))
-        ok &= (r >= self.range_min) & (r <= self.range_max)
-        x, y, r = x[ok], y[ok], r[ok].astype(np.float32)
-        beam = ((np.arctan2(y, x) + np.pi) / self.angle_increment).astype(int)
+        keep = (p[:, 2] > self.min_height) & (p[:, 2] < self.max_height)
+        keep &= ~((p[:, 0] > x0) & (p[:, 0] < x1) & (p[:, 1] > y0) & (p[:, 1] < y1))
+        p = p[keep]
+        r = np.hypot(p[:, 0], p[:, 1])
+        ok = (r >= self.range_min) & (r <= self.range_max)
+        p, r = p[ok], r[ok]
+        beam = ((np.arctan2(p[:, 1], p[:, 0]) + np.pi) / self.angle_increment).astype(int)
         beam = np.clip(beam, 0, self.n_beams - 1)
-        # minimum range per beam: sort by beam then range, keep the first of each beam
-        # (same result as np.minimum.at, which is very slow in numpy < 1.25)
         ranges = np.full(self.n_beams, np.inf, dtype=np.float32)
-        if len(r):
-            order = np.lexsort((r, beam))
-            b = beam[order]
-            first = np.r_[True, b[1:] != b[:-1]]
-            ranges[b[first]] = r[order][first]
+        np.minimum.at(ranges, beam, r.astype(np.float32))
 
         scan = LaserScan()
         scan.header.stamp = msg.header.stamp
@@ -135,7 +125,7 @@ class LioScan(Node):
         scan.scan_time = 0.0
         scan.range_min = self.range_min
         scan.range_max = self.range_max
-        scan.ranges = array.array('f', ranges.tobytes())   # skips the per-element check of a list
+        scan.ranges = ranges.tolist()
         self.scan_pub.publish(scan)
 
 
