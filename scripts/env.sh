@@ -7,6 +7,9 @@ source /opt/ros/humble/setup.bash
 
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 if [ -n "$GO2_IFACE" ]; then
+  # cyclonedds.xml is read by every node: GO2_IFACE given as a prefix of `source` is gone by then
+  # (bash drops it when source returns), a variable assigned here is not
+  export GO2W_DDS_IFACE="$GO2_IFACE"
   export CYCLONEDDS_URI="file://$GO2W_WS/config/cyclonedds.xml"
 else
   unset CYCLONEDDS_URI
