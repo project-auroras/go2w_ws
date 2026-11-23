@@ -18,8 +18,9 @@ def generate_launch_description():
                               description='Convert /utlidar/cloud to /scan'),
         DeclareLaunchArgument('lio', default_value='true',
                               description='LiDAR odometry with FAST-LIO, else wheel odometry'),
-        DeclareLaunchArgument('lio_scan_cpp', default_value='false',
-                              description='/scan from lio_scan_cpp (C++) instead of lio_scan.py'),
+        DeclareLaunchArgument('lio_scan_cpp', default_value='true',
+                              description='/scan from lio_scan_cpp (C++, same /scan, 6x less CPU '
+                              'on the NX) or lio_scan.py'),
 
         IncludeLaunchDescription(PythonLaunchDescriptionSource(PathJoinSubstitution(
             [FindPackageShare('go2w_description'), 'launch', 'description.launch.py']))),

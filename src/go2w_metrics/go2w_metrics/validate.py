@@ -313,6 +313,10 @@ def hardware_section(rep, bag, out_dir):
             return np.array([float(r[k]) for r in jet if r.get(k) not in (None, '')])
         cpu = col('cpu_percent')
         rep.add('hw_nx_cpu_mean_pct', cpu.mean(), '%', f'max {cpu.max():.0f} % (tegrastats, all cores)')
+        # the governor lowers the clock with low load: the same work then shows as more CPU %
+        mhz = np.concatenate([col(k) for k in jet[0] if re.fullmatch(r'cpu\d+_mhz', k)] or [np.array([])])
+        if len(mhz):
+            rep.add('hw_nx_cpu_mhz_mean', mhz.mean(), 'MHz', 'compare CPU % only at similar clocks')
         ram = col('ram_used_mb')
         rep.add('hw_nx_ram_used_max_mb', ram.max(), 'MB', f'of {col("ram_total_mb").max():.0f} MB')
         if len(g := col('gpu_percent')):
