@@ -52,8 +52,8 @@ CRITERIA = {
     'hw_nx_cpu_mean_pct': ('<=', 50.0),
     'hw_nx_temp_max_c': ('<=', 80.0),
 }
-# process names of the localization stack (ros2_vitals node names)
-LIO_STACK = ('laser_mapping', 'fastlio_mapping', 'lio_scan', 'go2w_driver')
+# process names of the localization stack (ros2_vitals node names; go2w_driver runs in go2w_container)
+LIO_STACK = ('laser_mapping', 'fastlio_mapping', 'lio_scan', 'go2w_driver', 'go2w_container')
 
 BUILTIN = ('static', 'line', 'spin', 'loop', 'nav', 'free')
 TOPICS = {'/utlidar/cloud', '/utlidar/imu', '/lidar_imu', '/Odometry', '/odom', '/scan',
@@ -155,14 +155,21 @@ def topics_section(rep, d):
 
 def static_section(rep, o, O):
     rep.section('Static drift')
-    dur = o[-1, 0] - o[0, 0]
-    k = 300.0 / max(dur, 1e-6)
+    # drift = slope of a line fitted to x, y, yaw over time (the last sample alone measures the
+    # jitter of the standing robot, ±1-2 deg, not drift); jitter = spread around that line
+    t = o[:, 0] - o[0, 0]
+    dur = t[-1]
+    yaw = np.degrees(np.unwrap(o[:, 4] - o[0, 4]))
+    fx, fy, fyaw = (np.polyfit(t, v, 1) for v in (o[:, 1], o[:, 2], yaw))
     dxy = np.linalg.norm(o[:, 1:3] - o[0, 1:3], axis=1)
-    dyaw = abs(math.degrees(wrap(o[-1, 4] - o[0, 4])))
     rep.add('static_duration_s', dur, 's')
-    rep.add('static_drift_xy_max_m', dxy.max(), 'm')
-    rep.add('static_drift_xy_m_per_5min', dxy[-1] * k, 'm', f'end {dxy[-1]:.3f} m in {dur:.0f} s')
-    rep.add('static_drift_yaw_deg_per_5min', dyaw * k, 'deg')
+    rep.add('static_drift_xy_max_m', dxy.max(), 'm', f'end {dxy[-1]:.3f} m (jitter + drift)')
+    rep.add('static_drift_xy_m_per_5min', 300 * math.hypot(fx[0], fy[0]), 'm', 'slope of the fit')
+    rep.add('static_drift_yaw_deg_per_5min', 300 * abs(fyaw[0]), 'deg', 'slope of the fit')
+    res_xy = np.hypot(o[:, 1] - np.polyval(fx, t), o[:, 2] - np.polyval(fy, t))
+    res_yaw = np.abs(yaw - np.polyval(fyaw, t))
+    rep.add('static_jitter_xy_p95_m', np.percentile(res_xy, 95), 'm', 'around the fit')
+    rep.add('static_jitter_yaw_p95_deg', np.percentile(res_yaw, 95), 'deg', f'max {res_yaw.max():.2f} deg')
     if len(O):
         rep.add('static_drift_z_lio_m', np.abs(O[:, 3] - O[0, 3]).max(), 'm',
                 '/Odometry (L1 frame), go2w_driver drops z')

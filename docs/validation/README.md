@@ -45,7 +45,7 @@ Los umbrales están en `CRITERIA` de `src/go2w_metrics/go2w_metrics/validate.py`
 | ID | Prueba | Cómo | Criterio |
 |---|---|---|---|
 | L0 | Entradas | En todas las pruebas | nube ≥ 14 Hz, IMU ≥ 230 Hz, `/odom` ≥ 14 Hz sin huecos > 200 ms, latencia nube → `/Odometry` p95 ≤ 100 ms |
-| L1 | `static` | Robot de pie, quieto, nadie alrededor, **5 min** | deriva ≤ 5 cm y ≤ 1° en 5 min |
+| L1 | `static` | Robot de pie, quieto, nadie alrededor, **5 min** | deriva ≤ 5 cm y ≤ 1° en 5 min (pendiente de una recta ajustada a x, y, yaw; el temblor del robot de pie se da aparte) |
 | L2 | `line` | Marca en el suelo y línea de referencia (cinta de carrocero), robot alineado con ella, ~10 m a velocidad constante sin corregir. Cinta: distancia **en línea recta** marca → robot (en diagonal si se ha desviado) y desvío lateral respecto a la línea. ×2 a 0.3 m/s y ×1 a ~1 m/s | error de escala ≤ 2 % |
 | L3 | `spin` | Sobre una marca, 3 vueltas en el sitio. ×1 a cada lado | ≤ 1° de error por vuelta; base_link se mueve ≤ 10 cm |
 | L4 | `loop` | Circuito cerrado de 30-50 m en interior, empezar y acabar en una marca, cinta del robot a la marca. ×2 | cota superior de deriva ≤ 0.5 % del recorrido |
@@ -73,7 +73,7 @@ El error final de N2 se mide en `odom` (lo que cree el localizador). El error re
 
 | Métrica | Criterio | Motivo |
 |---|---|---|
-| CPU de la pila de localización (FAST-LIO + lio_scan + go2w_driver) | ≤ 150 % (1.5 núcleos) | dejar sitio a EasyNav, YOLO y lo que venga |
+| CPU de la pila de localización (FAST-LIO + lio_scan + go2w_driver, que corre en `go2w_container`) | ≤ 150 % (1.5 núcleos) | dejar sitio a EasyNav, YOLO y lo que venga |
 | CPU total de la NX | ≤ 50 % de media | margen para la percepción |
 | Temperatura máxima | ≤ 80 °C | lejos del throttling |
 | RAM, GPU, potencia (`VDD_IN`) | se documentan | referencia para cuando se añada YOLO |
