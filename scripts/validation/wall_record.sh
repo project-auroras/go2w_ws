@@ -26,6 +26,8 @@ test: wall
 date: $(date -Iseconds)
 host: $(hostname)
 git: $(git -C "$WS" rev-parse --short HEAD) ($(git -C "$WS" rev-parse --abbrev-ref HEAD))
+uptime_s: $(cut -d' ' -f1 /proc/uptime)
+${WALL_EXTRA_META:-}
 ground_truth:
   wall_tape_m: $TAPE
 EOM

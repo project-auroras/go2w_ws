@@ -50,51 +50,79 @@ def clouds(bag, limit=300):
             yield np.stack([p['x'], p['y'], p['z']], axis=1).astype(float)
 
 
-def wall_distance(bag, rng=np.random.default_rng(0)):
-    pts = np.vstack(list(clouds(bag)))
-    pb = pts @ R_BL.T + T_BL
-    # in front of the head, a body-wide strip, above the floor
-    sel = (pb[:, 0] > 0.6) & (np.abs(pb[:, 1]) < 0.8) & (pb[:, 2] > -0.2) & (pb[:, 2] < 1.5)
-    p = pts[sel]
-    if len(p) < 50:
-        raise RuntimeError(f'only {len(p)} points in front of the robot')
-    best, tol = None, 0.02
+def fit_plane(p, axis, rng, tol=0.02):
+    """RANSAC + least squares plane among points p (LiDAR frame) whose normal, in the robot frame,
+    is along `axis` (0 = x: wall in front, 2 = z: floor). Distance from the LiDAR origin, inliers,
+    rms, angle of the normal to the axis."""
+    best = None
     for _ in range(400):
         a, b, c = p[rng.choice(len(p), 3, replace=False)]
         n = np.cross(b - a, c - a)
         if np.linalg.norm(n) < 1e-6:
             continue
         n /= np.linalg.norm(n)
-        if abs((R_BL @ n)[0]) < 0.9:      # wall: normal along the robot's x
+        if abs((R_BL @ n)[axis]) < 0.9:
             continue
         inl = np.abs((p - a) @ n) < tol
         if best is None or inl.sum() > best.sum():
             best = inl
     if best is None:
-        raise RuntimeError('no wall plane found')
+        return None
     w = p[best]
     centre = w.mean(axis=0)
-    n = np.linalg.svd(w - centre)[2][-1]  # least squares plane on the inliers
-    res = (w - centre) @ n
-    return abs(centre @ n), len(w), res.std(), math.degrees(math.acos(min(1, abs((R_BL @ n)[0]))))
+    n = np.linalg.svd(w - centre, full_matrices=False)[2][-1]
+    return abs(centre @ n), len(w), ((w - centre) @ n).std(), math.degrees(math.acos(min(1, abs((R_BL @ n)[axis]))))
+
+
+def planes(bag):
+    rng = np.random.default_rng(0)
+    pts = np.vstack(list(clouds(bag)))
+    pb = pts @ R_BL.T + T_BL
+    # wall: in front of the head, a body-wide strip, above the floor
+    wall = pts[(pb[:, 0] > 0.6) & (np.abs(pb[:, 1]) < 0.8) & (pb[:, 2] > -0.2) & (pb[:, 2] < 1.5)]
+    if len(wall) < 50:
+        raise RuntimeError(f'only {len(wall)} points in front of the robot')
+    w = fit_plane(wall, 0, rng)
+    if w is None:
+        raise RuntimeError('no wall plane found')
+    # floor: around the robot, below the body, not under the wall
+    floor = pts[(pb[:, 2] < -0.35) & (np.hypot(pb[:, 0], pb[:, 1]) < 1.5)]
+    f = fit_plane(floor, 2, rng) if len(floor) > 50 else None
+    return w, f
+
+
+def wall_distance(bag):
+    return planes(bag)[0]
 
 
 def main():
     rows = []
     for b in sys.argv[1:]:
         b = Path(b)
-        tape = (yaml.safe_load((b / 'meta.yaml').read_text()).get('ground_truth') or {}).get('wall_tape_m')
-        d, n, rms, ang = wall_distance(b)
-        print(f'{b.name}: tape {tape} m, cloud {d:.4f} m, diff {d - tape:+.4f} m '
-              f'({n} wall points, plane rms {rms * 1000:.1f} mm, wall {ang:.1f} deg off the robot axis)')
-        rows.append((tape, d))
-    if len(rows) >= 2:
-        t, d = np.array(rows).T
-        k, c = np.polyfit(t, d, 1)
-        print(f'\ncloud = {k:.4f} * tape {c:+.4f} m  ->  range scale error {100 * (k - 1):+.2f} % '
-              '(- = LiDAR short; FAST-LIO in the line test: about -3 %)')
-        if abs(t.max() - t.min()) < 2:
-            print('!! distances less than 2 m apart: the scale is not well determined')
+        meta = yaml.safe_load((b / 'meta.yaml').read_text())
+        tape = (meta.get('ground_truth') or {}).get('wall_tape_m')
+        (d, n, rms, ang), f = planes(b)
+        fl = f[0] if f else float('nan')
+        when = f"minute {meta['warmup_min']:>3}, " if 'warmup_min' in meta else ''
+        up = f"NX up {float(meta['uptime_s']) / 60:.0f} min, " if 'uptime_s' in meta else ''
+        print(f'{b.name}: {when}{up}tape {tape} m, wall {d:.4f} m (diff {d - tape:+.4f}), floor {fl:.4f} m '
+              f'| {n} wall points, rms {rms * 1000:.1f} mm, wall {ang:.1f} deg off axis')
+        rows.append((tape, d, fl))
+    if len(rows) < 2:
+        return
+    t, d, fl = np.array(rows).T
+    if np.ptp(t) < 0.05:
+        # warm-up series at one distance: change of the wall and the floor since the first record.
+        # Same change in mm -> offset; change in proportion to the range (wall/floor) -> scale.
+        print(f'\nsince the first record: wall {1000 * (d[-1] - d[0]):+.1f} mm ({100 * (d[-1] / d[0] - 1):+.2f} %), '
+              f'floor {1000 * (fl[-1] - fl[0]):+.1f} mm ({100 * (fl[-1] / fl[0] - 1):+.2f} %)')
+        print('   same mm -> range offset; same % -> range scale')
+        return
+    k, c = np.polyfit(t, d, 1)
+    print(f'\ncloud = {k:.4f} * tape {c:+.4f} m  ->  range scale error {100 * (k - 1):+.2f} % '
+          '(- = LiDAR short; FAST-LIO in the line test: about -3 %)')
+    if np.ptp(t) < 2:
+        print('!! distances less than 2 m apart: the scale is not well determined')
 
 
 if __name__ == '__main__':
