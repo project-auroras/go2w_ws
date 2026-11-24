@@ -42,6 +42,7 @@ CRITERIA = {
     'static_drift_yaw_deg_per_5min': ('<=', 1.0),
     'line_scale_error_pct': ('<=', 2.0),
     'line_start_end_at_rest': ('>=', 1),
+    'spin_start_end_at_rest': ('>=', 1),
     'spin_yaw_error_deg_per_turn': ('<=', 1.0),
     'spin_translation_m': ('<=', 0.10),
     'loop_drift_upper_pct': ('<=', 0.5),
@@ -189,69 +190,129 @@ def rest_pose(o, t0, t1):
     return w[:, 1].mean(), w[:, 2].mean(), yaw, dxy.max(), dyaw.max()
 
 
-def line_section(rep, o, gt, cmds=()):
-    rep.section('Straight line')
-    # motion = first to last non-zero /cmd_vel (drive_line.py); without it, odom speed > 0.1 m/s
-    moving = [t for t, _, m in cmds if abs(m.linear.x) > 1e-3]
+def tape_point(gt):
+    """Robot point at the end in the floor-line frame (forward along the line from the start
+    mark, + left), or None. Either measured directly (forward_m, lateral_m) or triangulated from
+    two marks on the line (mark_a_m at dist_a_m, mark_b_m at dist_b_m, side left/right), which
+    needs only a short tape and no right angle."""
+    if gt.get('forward_m') and gt.get('lateral_m') is not None:
+        return gt['forward_m'], gt['lateral_m'], 'forward + sideways'
+    xa, a, xb, b = (gt.get(k) for k in ('mark_a_m', 'dist_a_m', 'mark_b_m', 'dist_b_m'))
+    if None in (xa, a, xb, b) or xa == xb:
+        return None
+    x = (a * a - b * b + xb * xb - xa * xa) / (2 * (xb - xa))
+    y2 = a * a - (x - xa) ** 2
+    if y2 < -0.02 ** 2:   # the two circles do not meet: a measure or a mark is wrong
+        raise ValueError(f'tape distances do not fit: marks {xa}/{xb} m, distances {a}/{b} m')
+    side = str(gt.get('side', 'left')).lower()
+    y = math.sqrt(max(y2, 0.0)) * (-1 if side.startswith(('r', 'd')) else 1)
+    return x, y, f'marks {xa:g} m ({a:g}) and {xb:g} m ({b:g}), {side}'
+
+
+def motion_window(o, cmds, field):
+    """First and last non-zero /cmd_vel `field` (drive_line.py), else odom speed > 0.1 m/s."""
+    moving = [t for t, _, m in cmds if abs(getattr(m.linear if field == 'x' else m.angular, field)) > 1e-3]
     if moving:
-        t_go, t_stop = moving[0], moving[-1]
-    else:
-        v = np.r_[0, np.linalg.norm(np.diff(o[:, 1:3], axis=0), axis=1) / np.diff(o[:, 0])]
-        vs = np.convolve(v, np.ones(15) / 15, mode='same')
-        idx = np.flatnonzero(vs > 0.1)
-        if not len(idx):
-            rep.add('line_scale_error_pct', None, '%', 'no motion found')
-            return
-        t_go, t_stop = o[idx[0], 0], o[idx[-1], 0]
+        return moving[0], moving[-1]
+    if field != 'x':
+        return o[0, 0] + 1.5, o[-1, 0] - 2.5
+    v = np.r_[0, np.linalg.norm(np.diff(o[:, 1:3], axis=0), axis=1) / np.diff(o[:, 0])]
+    vs = np.convolve(v, np.ones(15) / 15, mode='same')
+    idx = np.flatnonzero(vs > 0.1)
+    return (o[idx[0], 0], o[idx[-1], 0]) if len(idx) else None
+
+
+def rest_ends(rep, o, win, key):
+    """Rest pose before and after the motion; adds `key` (1 = robot still in both windows)."""
+    if win is None:
+        rep.add(key, 0, '', 'no motion found')
+        return None
+    t_go, t_stop = win
     a = rest_pose(o, t_go - 1.5, t_go - 0.05)
     b = rest_pose(o, t_stop + 1.0, t_stop + 2.5)
     if a is None or b is None:
-        rep.add('line_start_end_at_rest', 0, '', 'need 1.5 s at rest before and 2.5 s after the motion')
-        return
+        rep.add(key, 0, '', 'need 1.5 s at rest before and 2.5 s after the motion')
+        return None
     # thresholds above the jitter of the standing robot (L1: up to 8 cm, ±2-4 deg sample to sample)
     still = a[3] <= 0.10 and a[4] <= 6 and b[3] <= 0.10 and b[4] <= 6
-    rep.add('line_start_end_at_rest', int(still), '',
+    rep.add(key, int(still), '',
             f'start: {a[3]*100:.1f} cm / {a[4]:.1f} deg, end: {b[3]*100:.1f} cm / {b[4]:.1f} deg '
             '(max spread in the rest windows; robot moved -> start/end undefined, repeat)')
+    return a, b
+
+
+def line_section(rep, o, gt, cmds=()):
+    rep.section('Straight line')
+    win = motion_window(o, cmds, 'x')
+    ends = rest_ends(rep, o, win, 'line_start_end_at_rest')
+    if ends is None:
+        return
+    a, b = ends
     dx, dy = b[0] - a[0], b[1] - a[1]
     d = math.hypot(dx, dy)
     c, s = math.cos(a[2]), math.sin(a[2])
     fwd, left = dx * c + dy * s, -dx * s + dy * c
-    rep.add('line_distance_lio_m', d, 'm', f'{t_stop - t_go:.0f} s of motion')
+    rep.add('line_distance_lio_m', d, 'm', f'{win[1] - win[0]:.0f} s of motion')
     rep.add('line_end_lio_forward_m', fwd, 'm', 'in the start frame of the robot')
     rep.add('line_end_lio_left_m', left, 'm', '+ left: wheel drift, the heading is not corrected')
     rep.add('line_heading_change_deg', math.degrees(wrap(b[2] - a[2])), 'deg')
-    fwd_t, lat_t = gt.get('forward_m'), gt.get('lateral_m')
-    tape = math.hypot(fwd_t, lat_t) if fwd_t and lat_t is not None else gt.get('distance_m')
+    try:
+        pt = tape_point(gt)
+    except ValueError as e:
+        rep.add('line_scale_error_pct', None, '%', str(e))
+        return
+    if pt:
+        fwd_t, lat_t, how = pt
+        tape = math.hypot(fwd_t, lat_t)
+        rep.add('line_end_tape_forward_m', fwd_t, 'm', how)
+        rep.add('line_end_tape_left_m', lat_t, 'm', '+ left of the floor line')
+    else:
+        tape, how = gt.get('distance_m'), 'straight distance'
     if not tape:
         rep.add('line_scale_error_pct', None, '%', 'no tape distance in meta.yaml')
         return
-    note = f'hypot(forward {fwd_t}, lateral {lat_t})' if fwd_t else 'straight distance'
-    rep.add('line_distance_tape_m', tape, 'm', note)
+    rep.add('line_distance_tape_m', tape, 'm', how)
     rep.add('line_scale_error_pct', 100 * abs(d - tape) / tape, '%',
             f'{100 * (d - tape) / tape:+.2f} % (- = LIO short)')
-    if fwd_t and lat_t is not None:
+    if pt:
         # the tape angle is relative to the floor line, the LIO angle to the start heading: the
         # difference is how far the robot was from parallel to the line at the start (plus LIO yaw
-        # error, not separable). Only a sanity check, e.g. a wrong sign of the lateral offset.
+        # error, not separable). Only a sanity check, e.g. a wrong side.
         diff = math.degrees(math.atan2(lat_t, fwd_t) - math.atan2(left, fwd))
         rep.add('line_start_misalignment_deg', diff, 'deg', 'robot vs floor line at the start (+ LIO yaw error)')
 
 
-def spin_section(rep, o, gt):
+def spin_section(rep, o, gt, cmds=()):
     rep.section('Turns in place')
-    yaw = np.unwrap(o[:, 4])
-    total = math.degrees(yaw[-1] - yaw[0])
-    rep.add('spin_total_deg', total, 'deg')
-    rep.add('spin_translation_m', np.linalg.norm(o[:, 1:3] - o[0, 1:3], axis=1).max(), 'm',
+    win = motion_window(o, cmds, 'z')
+    ends = rest_ends(rep, o, win, 'spin_start_end_at_rest')
+    sel = (o[:, 0] >= win[0] - 1.5) & (o[:, 0] <= win[1] + 2.5) if win else np.ones(len(o), bool)
+    w = o[sel]
+    if ends:
+        # unwrapped yaw for the whole turns, rest-window means for the ends (single samples jitter)
+        a, b = ends
+        whole = np.unwrap(w[:, 4])[-1] - np.unwrap(w[:, 4])[0]
+        total = math.degrees(whole + wrap(b[2] - w[-1, 4]) - wrap(a[2] - w[0, 4]))
+        p0 = np.array(a[:2])
+    else:
+        total = math.degrees(np.unwrap(w[:, 4])[-1] - np.unwrap(w[:, 4])[0])
+        p0 = w[0, 1:3]
+    rep.add('spin_total_deg', total, 'deg', '+ = left (counter-clockwise)')
+    rep.add('spin_translation_m', np.linalg.norm(w[:, 1:3] - p0, axis=1).max(), 'm',
             'max distance of base_link from the start')
     turns = gt.get('turns')
-    if turns:
-        err = abs(abs(total) - 360 * turns)
-        rep.add('spin_yaw_error_deg', err, 'deg', f'expected {360 * turns:.0f}')
-        rep.add('spin_yaw_error_deg_per_turn', err / turns, 'deg')
-    else:
+    if not turns:
         rep.add('spin_yaw_error_deg_per_turn', None, 'deg', 'no turn count in meta.yaml')
+        return
+    # real rotation: whole turns + what the tape says beyond them (front/rear marks)
+    f, r, L = gt.get('front_left_m'), gt.get('rear_left_m'), gt.get('front_rear_m')
+    extra = math.degrees(math.atan2(f - r, L)) if None not in (f, r, L) and L else 0.0
+    real = math.copysign(360 * abs(turns), total) + extra
+    err = total - real
+    rep.add('spin_real_deg', real, 'deg',
+            f'{abs(turns):g} turns {extra:+.1f} deg from the tape' if extra else f'{abs(turns):g} turns, no tape offset')
+    rep.add('spin_yaw_error_deg', err, 'deg', '+ = LIO turned more than the robot')
+    rep.add('spin_yaw_error_deg_per_turn', abs(err) / abs(turns), 'deg')
 
 
 def loop_section(rep, o, gt):
@@ -444,7 +505,7 @@ def run(bag, test=None):
     topics_section(rep, d)
     if len(o) > 2:
         {'static': lambda: static_section(rep, o, O), 'line': lambda: line_section(rep, o, gt, d.get('/cmd_vel', [])),
-         'spin': lambda: spin_section(rep, o, gt), 'loop': lambda: loop_section(rep, o, gt),
+         'spin': lambda: spin_section(rep, o, gt, d.get('/cmd_vel', [])), 'loop': lambda: loop_section(rep, o, gt),
          'nav': lambda: nav_section(rep, d, o)}.get(test, lambda: None)()
     if mod:
         mod.section(rep, d, o, meta)

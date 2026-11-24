@@ -72,8 +72,8 @@ fi
 echo "== recording $OUT  (Ctrl+C to stop)"
 case "$TEST" in
   static) echo "   Robot still, standing, nobody moving around it. At least 5 minutes." ;;
-  line)   echo "   Mark start on the floor, drive straight ~10 m at constant speed, stop. Tape the distance." ;;
-  spin)   echo "   Stand on a mark, 3 full turns in place (count them), stop facing the start direction." ;;
+  line)   echo "   Other terminal: scripts/validation/drive_line.py 10 [--speed 1.0]. Hands off the remote." ;;
+  spin)   echo "   Other terminal: scripts/validation/drive_line.py --spin 3 (or --spin -3). Hands off the remote." ;;
   loop)   echo "   Start on a floor mark, drive a closed loop, stop as close as possible to the mark." ;;
   nav)    echo "   Send goals with scripts/validation/send_goal.py (another terminal)." ;;
 esac
@@ -94,14 +94,41 @@ echo "== ground truth (empty = unknown)"
 GT=""
 case "$TEST" in
   line) while true; do
-          echo "   Robot point projected on the floor line (square / plumb line):"
-          read -rp "   1) along the line, start mark -> that projection [m]: " v
-          read -rp "   2) sideways, line -> robot point, LEFT + / RIGHT - looking forward [m]: " l
-          read -rp "   along ${v:-?} m, sideways ${l:-?} m. OK? [Y/n] " ok
-          [[ "$ok" =~ ^[Nn] ]] || break
+          echo "   Point under the LiDAR (front of the head) on the floor. Tape from it to the TWO"
+          echo "   marks of the floor line closest to it (e.g. the 8 m and the 10 m marks)."
+          read -rp "   1) first mark, position on the line [m, e.g. 8]: " xa
+          read -rp "      tape robot point -> that mark [m]: " a
+          read -rp "   2) second mark, position on the line [m, e.g. 10]: " xb
+          read -rp "      tape robot point -> that mark [m]: " b
+          read -rp "   3) robot LEFT or RIGHT of the line, looking forward [l/r]: " sd
+          case "$sd" in [Rr]*|[Dd]*) sd=right ;; *) sd=left ;; esac
+          RES=$(python3 - "$xa" "$a" "$xb" "$b" "$sd" <<'PY'
+import math, sys
+try:
+    xa, a, xb, b = map(float, sys.argv[1:5])
+    x = (a * a - b * b + xb * xb - xa * xa) / (2 * (xb - xa))
+    y2 = a * a - (x - xa) ** 2
+    if y2 < -0.02 ** 2:
+        print('!! these distances do not fit (check the marks and the numbers)')
+    else:
+        y = math.sqrt(max(y2, 0)) * (-1 if sys.argv[5] == 'right' else 1)
+        print(f'-> along the line {x:.3f} m, sideways {y:+.3f} m, straight distance {math.hypot(x, y):.3f} m')
+except (ValueError, ZeroDivisionError):
+    print('!! need four numbers and two different marks')
+PY
+)
+          echo "   $RES"
+          read -rp "   OK? [Y/n] " ok
+          [[ "$ok" =~ ^[Nn] || "$RES" == '!!'* ]] || break
         done
-        GT="forward_m: ${v:-null}"$'\n'"  lateral_m: ${l:-null}" ;;
-  spin) read -rp "Full turns done: " v; GT="turns: ${v:-null}" ;;
+        GT="mark_a_m: ${xa:-null}"$'\n'"  dist_a_m: ${a:-null}"$'\n'"  mark_b_m: ${xb:-null}"$'\n'"  dist_b_m: ${b:-null}"$'\n'"  side: $sd" ;;
+  spin) read -rp "Full turns done (count them): " v
+        echo "   Before the test you marked on the floor the point under the LiDAR (front) and under"
+        echo "   the back of the body (rear). Now, how far is each point from its mark, sideways?"
+        read -rp "   front point -> front mark, LEFT + / RIGHT - looking forward [m]: " f
+        read -rp "   rear point  -> rear mark,  LEFT + / RIGHT - [m]: " r
+        read -rp "   distance front mark -> rear mark [m]: " L
+        GT="turns: ${v:-null}"$'\n'"  front_left_m: ${f:-null}"$'\n'"  rear_left_m: ${r:-null}"$'\n'"  front_rear_m: ${L:-null}" ;;
   loop) read -rp "Distance robot -> start mark at the end, tape [m]: " v; GT="return_error_m: ${v:-null}" ;;
 esac
 read -rp "Place / surface / notes: " NOTES
