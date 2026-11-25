@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 from rclpy.serialization import deserialize_message
-from rosbag2_py import ConverterOptions, SequentialReader, StorageOptions
+from rosbag2_py import ConverterOptions, SequentialReader, StorageFilter, StorageOptions
 from sensor_msgs.msg import PointCloud2
 from sensor_msgs_py import point_cloud2
 
@@ -48,6 +48,29 @@ def clouds(bag, limit=300):
             m = deserialize_message(data, PointCloud2)
             p = point_cloud2.read_points(m, field_names=('x', 'y', 'z'), skip_nans=True)
             yield np.stack([p['x'], p['y'], p['z']], axis=1).astype(float)
+
+
+def power(bag):
+    """Battery and temperatures from /lowstate (recorded since 240113f), '' if not in the bag."""
+    try:
+        from unitree_go.msg import LowState
+    except ImportError:
+        return ''
+    r = SequentialReader()
+    r.open(StorageOptions(uri=str(bag), storage_id='sqlite3'), ConverterOptions('', ''))
+    r.set_filter(StorageFilter(topics=['/lowstate']))
+    v, a, soc, bms, imu = [], [], [], [], []
+    while r.has_next():
+        m = deserialize_message(r.read_next()[1], LowState)
+        v.append(m.power_v)
+        a.append(m.power_a)
+        soc.append(m.bms_state.soc)
+        bms.append(max(m.bms_state.bq_ntc))
+        imu.append(m.imu_state.temperature)
+    if not v:
+        return ''
+    return (f'battery {np.mean(v):.2f} V {np.mean(a):.1f} A soc {np.median(soc):.0f} %, '
+            f'bms {np.median(bms):.0f} C, imu {np.median(imu):.0f} C | ')
 
 
 def fit_plane(p, axis, rng, tol=0.02):
@@ -105,7 +128,7 @@ def main():
         fl = f[0] if f else float('nan')
         when = f"minute {meta['warmup_min']:>3}, " if 'warmup_min' in meta else ''
         up = f"NX up {float(meta['uptime_s']) / 60:.0f} min, " if 'uptime_s' in meta else ''
-        print(f'{b.name}: {when}{up}tape {tape} m, wall {d:.4f} m (diff {d - tape:+.4f}), floor {fl:.4f} m '
+        print(f'{b.name}: {when}{up}{power(b)}tape {tape} m, wall {d:.4f} m (diff {d - tape:+.4f}), floor {fl:.4f} m '
               f'| {n} wall points, rms {rms * 1000:.1f} mm, wall {ang:.1f} deg off axis')
         rows.append((tape, d, fl))
     if len(rows) < 2:
