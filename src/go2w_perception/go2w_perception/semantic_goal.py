@@ -1,5 +1,6 @@
 import math
 
+from easynav_interfaces.msg import NavigationControl
 from geometry_msgs.msg import PoseStamped
 import rclpy
 from rclpy.node import Node
@@ -16,11 +17,12 @@ class SemanticGoal(Node):
     Escucha /semantic/goal_request (std_msgs/String):
       - "Clase": el objeto confirmado de esa clase más cercano al robot.
       - "Clase:N": el objeto con id N (el número de la etiqueta en RViz).
-      - "cancel": deja de vigilar la meta (EasyNav sigue con la suya; para pararlo,
-        mandar otra meta o cancelar en EasyNav).
+      - "cancel": cancela la meta en EasyNav (/easynav_control) y deja de vigilarla.
     Publica en /goal_pose (lo que lee EasyNav) un punto a `standoff` m del borde del
     objeto, en la recta robot -> objeto, mirando al objeto, en map_frame y con la z del
     robot (EasyNav compara también la altura). En /semantic/goal_status publica el estado.
+    Si con una meta activa el robot no avanza `stuck_distance` m en `stuck_time` s (p. ej.
+    empujando un caballón que el lidar no ve de cerca), cancela la meta y avisa "atascado".
     """
 
     def __init__(self):
@@ -30,15 +32,19 @@ class SemanticGoal(Node):
         self.robot_frame = p('robot_frame', 'base_link').value
         self.standoff = p('standoff', 1.0).value
         self.arrive_tolerance = p('arrive_tolerance', 0.4).value
+        self.stuck_time = p('stuck_time', 6.0).value          # s sin avanzar
+        self.stuck_distance = p('stuck_distance', 0.2).value  # m mínimos en ese tiempo
         landmarks_topic = p('landmarks_topic', '/semantic/landmarks').value
         goal_topic = p('goal_topic', '/goal_pose').value
 
         self.landmarks = []
         self.goal = None        # (x, y, descripción)
+        self.progress = None    # (x, y, t) último punto donde avanzó
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.goal_pub = self.create_publisher(PoseStamped, goal_topic, 10)
         self.status_pub = self.create_publisher(String, '/semantic/goal_status', 10)
+        self.control_pub = self.create_publisher(NavigationControl, '/easynav_control', 10)
         self.create_subscription(DetectionArray, landmarks_topic, self.on_landmarks, 10)
         self.create_subscription(String, '/semantic/goal_request', self.on_request, 10)
         self.create_timer(0.5, self.check_arrival)
@@ -62,6 +68,7 @@ class SemanticGoal(Node):
     def on_request(self, msg):
         text = msg.data.strip()
         if text.lower() == 'cancel':
+            self.stop_easynav()
             self.goal = None
             self.status('cancelada')
             return
@@ -100,6 +107,7 @@ class SemanticGoal(Node):
         self.goal_pub.publish(goal)
         name = f'{target.class_name}:{target.id}'
         self.goal = (gx, gy, name)
+        self.progress = (robot[0], robot[1], self.now_s())
         self.status(f'yendo a {name} en ({c.x:.1f}, {c.y:.1f}); meta ({gx:.1f}, {gy:.1f}), '
                     f'a {dist:.1f} m')
 
@@ -112,6 +120,27 @@ class SemanticGoal(Node):
         if math.hypot(self.goal[0] - robot[0], self.goal[1] - robot[1]) < self.arrive_tolerance:
             self.status(f'llegado a {self.goal[2]}')
             self.goal = None
+            return
+        x0, y0, t0 = self.progress
+        if math.hypot(robot[0] - x0, robot[1] - y0) > self.stuck_distance:
+            self.progress = (robot[0], robot[1], self.now_s())   # avanza: reinicia
+        elif self.now_s() - t0 > self.stuck_time:
+            self.stop_easynav()
+            self.status(f'atascado yendo a {self.goal[2]} en ({robot[0]:.1f}, {robot[1]:.1f}): '
+                        f'meta cancelada')
+            self.goal = None
+
+    def now_s(self):
+        return self.get_clock().now().nanoseconds * 1e-9
+
+    def stop_easynav(self):
+        # Las metas de /goal_pose son de "easynav_system_initpose" y EasyNav solo deja
+        # cancelar al dueño de la meta (GoalManager.cpp)
+        msg = NavigationControl()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.type = NavigationControl.CANCEL
+        msg.user_id = 'easynav_system_initpose'
+        self.control_pub.publish(msg)
 
     def status(self, text):
         self.get_logger().info(text)

@@ -14,6 +14,7 @@
   <depend>visualization_msgs</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
+  <depend>easynav_interfaces</depend>
 
   <exec_depend>go2w_bringup</exec_depend>
   <exec_depend>rviz2</exec_depend>

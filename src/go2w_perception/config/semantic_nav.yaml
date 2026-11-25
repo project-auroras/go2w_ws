@@ -24,6 +24,8 @@ semantic_goal:
     robot_frame: base_link
     standoff: 1.0          # m entre el borde del objeto y la meta
     arrive_tolerance: 0.4  # m (EasyNav: position_tolerance 0.3)
+    stuck_time: 6.0        # s sin avanzar stuck_distance -> cancela la meta
+    stuck_distance: 0.2    # m
 
 row_follower:
   ros__parameters:
