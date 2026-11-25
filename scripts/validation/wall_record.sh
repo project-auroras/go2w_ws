@@ -18,7 +18,7 @@ OUT="$WS/bags/$(date +%F_%H-%M-%S)_wall"
 echo "== recording 10 s, robot still, nobody between it and the wall"
 # stdin from /dev/null: timeout runs ros2 in a background process group and its keyboard handler
 # reading the terminal gets it stopped (SIGTTIN), where SIGINT never lands. -k: kill if still alive
-timeout -s INT -k 5 12 ros2 bag record -o "$OUT" /utlidar/cloud /tf_static < /dev/null > "$OUT.log" 2>&1
+timeout -s INT -k 5 12 ros2 bag record -o "$OUT" /utlidar/cloud /tf_static /lowstate < /dev/null > "$OUT.log" 2>&1
 mv "$OUT.log" "$OUT/" 2>/dev/null
 [ -f "$OUT/metadata.yaml" ] || { echo "!! no bag written (is /utlidar/cloud published?)" >&2; exit 1; }
 cat > "$OUT/meta.yaml" <<EOM
