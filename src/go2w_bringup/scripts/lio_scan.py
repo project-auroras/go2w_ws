@@ -20,7 +20,7 @@ import numpy as np  # noqa: E402
 import rclpy
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from rclpy.qos import qos_profile_sensor_data
+from rclpy.qos import QoSProfile, ReliabilityPolicy, qos_profile_sensor_data
 from rclpy.time import Time
 from sensor_msgs.msg import LaserScan, PointCloud2
 from tf2_ros import Buffer, TransformException, TransformListener
@@ -66,7 +66,9 @@ class LioScan(Node):
         self.clouds = deque()
 
         self.n_beams = int(np.ceil(2.0 * np.pi / self.angle_increment))
-        self.scan_pub = self.create_publisher(LaserScan, '/scan', qos_profile_sensor_data)
+        # reliable: EasyNav subscribes to LaserScan as reliable (no param), best effort never reaches it
+        scan_qos = QoSProfile(depth=qos_profile_sensor_data.depth, reliability=ReliabilityPolicy.RELIABLE)
+        self.scan_pub = self.create_publisher(LaserScan, '/scan', scan_qos)
         self.create_subscription(Odometry, '/Odometry', self.on_odometry, 20)
         self.create_subscription(PointCloud2, '/cloud_registered', self.on_cloud, 20)
 

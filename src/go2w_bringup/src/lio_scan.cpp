@@ -60,7 +60,8 @@ public:
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
     n_beams_ = static_cast<int>(std::ceil(2.0 * M_PI / angle_increment_));
 
-    scan_pub_ = create_publisher<sensor_msgs::msg::LaserScan>("/scan", rclcpp::SensorDataQoS());
+    // reliable: EasyNav subscribes to LaserScan as reliable (no param), best effort never reaches it
+    scan_pub_ = create_publisher<sensor_msgs::msg::LaserScan>("/scan", rclcpp::SensorDataQoS().reliable());
     odom_sub_ = create_subscription<nav_msgs::msg::Odometry>(
       "/Odometry", rclcpp::QoS(20),
       [this](nav_msgs::msg::Odometry::ConstSharedPtr msg) {on_odometry(*msg);});
