@@ -127,9 +127,11 @@ system_node:
     robot_footprint_frame: base_footprint
     odom_frame: odom
     map_frame: map
-    position_tolerance: 0.3
-    # Every goal (also intermediate waypoints) must match yaw too
-    angle_tolerance: 0.3
+    # The goal is FINISHED (and regulated_pp stops) as soon as both are inside: with 0.3 m / 0.3 rad
+    # the return legs of N2 (2026-11-26) stopped mid-turn, 19-24 deg off. Tighter for the real robot
+    position_tolerance: 0.2
+    # Every goal (also intermediate waypoints) must match yaw too. 0.1 rad = 5.7 deg
+    angle_tolerance: 0.1
     # odom/base_footprint are at body height, goals from the NavMap tool on the ground (-0.5)
     height_tolerance: 1.0
     # Go2-W footprint ~0.7 x 0.45 m
