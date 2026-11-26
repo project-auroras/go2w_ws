@@ -97,16 +97,22 @@ class LioScan(Node):
                                    throttle_duration_sec=2.0)
             return
 
-        self.clouds.append((stamp, xyz(msg)))
+        # camera_init -> L1 now -> base_link
+        world_to_base = self.base_to_lidar @ np.linalg.inv(pose)
+        rot, tr = world_to_base[:3, :3], world_to_base[:3, 3]
+
+        # The robot's own points are dropped from each cloud at its own pose, before it is kept.
+        # Cutting the box only at the current pose leaves the body of the older clouds behind
+        # the robot when it moves (up to 0.3 m at 0.3 m/s), and EasyNav inflates that trail.
+        x0, x1, y0, y1 = self.self_box
+        c = xyz(msg)
+        b = c @ rot.T + tr
+        self.clouds.append((stamp, c[~((b[:, 0] > x0) & (b[:, 0] < x1) & (b[:, 1] > y0) & (b[:, 1] < y1))]))
         while self.clouds and stamp - self.clouds[0][0] > self.window * 1e9:
             self.clouds.popleft()
 
-        # camera_init -> L1 now -> base_link
-        world_to_base = self.base_to_lidar @ np.linalg.inv(pose)
         p = np.vstack([c for _, c in self.clouds])
-        p = p @ world_to_base[:3, :3].T + world_to_base[:3, 3]
-
-        x0, x1, y0, y1 = self.self_box
+        p = p @ rot.T + tr
         keep = (p[:, 2] > self.min_height) & (p[:, 2] < self.max_height)
         keep &= ~((p[:, 0] > x0) & (p[:, 0] < x1) & (p[:, 1] > y0) & (p[:, 1] < y1))
         p = p[keep]

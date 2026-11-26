@@ -139,16 +139,24 @@ private:
       return;
     }
 
-    clouds_.emplace_back(stamp, xyz(msg));
-    while (!clouds_.empty() && stamp - clouds_.front().first > window_ * 1e9) {
-      clouds_.pop_front();
-    }
-
     // camera_init -> L1 now -> base_link
     const Eigen::Matrix4d world_to_base = base_to_lidar_ * pose->inverse();
     const Eigen::Matrix3d rot = world_to_base.topLeftCorner<3, 3>();
     const Eigen::Vector3d tr = world_to_base.topRightCorner<3, 1>();
     const double x0 = self_box_[0], x1 = self_box_[1], y0 = self_box_[2], y1 = self_box_[3];
+
+    // The robot's own points are dropped from each cloud at its own pose, before it is kept
+    // (see lio_scan.py): otherwise the body of the older clouds trails behind the moving robot.
+    std::vector<Eigen::Vector3d> cloud = xyz(msg);
+    cloud.erase(std::remove_if(cloud.begin(), cloud.end(),
+      [&](const Eigen::Vector3d & pw) {
+        const Eigen::Vector3d p = rot * pw + tr;
+        return p.x() > x0 && p.x() < x1 && p.y() > y0 && p.y() < y1;
+      }), cloud.end());
+    clouds_.emplace_back(stamp, std::move(cloud));
+    while (!clouds_.empty() && stamp - clouds_.front().first > window_ * 1e9) {
+      clouds_.pop_front();
+    }
 
     std::vector<float> ranges(n_beams_, std::numeric_limits<float>::infinity());
     for (const auto & c : clouds_) {
